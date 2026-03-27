@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -7,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>預約系統</title>
   <style>
-    /* =========================
-       Mobile First 設計
-       ========================= */
     :root{
       --bg:#0f172a;
       --panel:#111827;
@@ -31,7 +26,6 @@
       font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;
     }
 
-    /* ===== Header（手機固定在上方） ===== */
     header{
       position:sticky;
       top:0;
@@ -59,6 +53,7 @@
       color:var(--text);
       font-size:14px;
     }
+
     .nav button.active{
       background:var(--secondary);
       color:#020617;
@@ -75,7 +70,6 @@
       margin-bottom:16px;
     }
 
-    /* ===== 顯示頁（手機最重要） ===== */
     .display{
       text-align:center;
     }
@@ -99,19 +93,17 @@
       gap:12px;
     }
 
-.badge{
-  padding:12px 24px;      /* 左右加大 */
-  min-width:60px;          /* 最小寬度 */
-  text-align:center;       /* 文字置中 */
-  border-radius:999px;
-  background:#020617;
-  border:1px solid rgba(255,255,255,.15);
-  font-size:20px;
-  font-weight:700;
-}
+    .badge{
+      padding:12px 24px;
+      min-width:60px;
+      text-align:center;
+      border-radius:999px;
+      background:#020617;
+      border:1px solid rgba(255,255,255,.15);
+      font-size:20px;
+      font-weight:700;
+    }
 
-
-    /* ===== 登入 ===== */
     .login input{
       width:100%;
       padding:14px;
@@ -134,9 +126,11 @@
       color:#020617;
     }
 
-    .error{color:var(--danger);margin-top:8px}
+    .error{
+      color:var(--danger);
+      margin-top:8px
+    }
 
-    /* ===== 櫃檯操作（大按鈕，適合觸控） ===== */
     .counter-actions{
       display:grid;
       grid-template-columns:1fr;
@@ -149,6 +143,7 @@
       font-weight:800;
       border-radius:14px;
       border:none;
+      box-shadow: 0 6px 16px rgba(0,0,0,.3);
     }
 
     .btn.primary{background:var(--primary);color:#052e16}
@@ -188,7 +183,6 @@
       padding:16px 0 24px;
     }
 
-    /* ===== 平板 / 桌機才放大 ===== */
     @media (min-width:768px){
       main{max-width:900px;margin:auto}
       .display .now{font-size:96px}
@@ -196,434 +190,263 @@
       .counter-actions{grid-template-columns:repeat(3,1fr)}
       .stats{grid-template-columns:repeat(3,1fr)}
     }
-    /* =========================
-   按鈕動態效果（全站）
-   ========================= */
 
-/* 基本動畫設定 */
-button{
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    filter 0.15s ease;
-  cursor: pointer;
-}
+    button{
+      transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        filter 0.15s ease;
+      cursor: pointer;
+    }
 
-/* 滑鼠 hover（桌機） */
-button:hover{
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0,0,0,.35);
-  filter: brightness(1.05);
-}
+    button:hover{
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 20px rgba(0,0,0,.35);
+      filter: brightness(1.05);
+    }
 
-/* 按下瞬間（手機最重要） */
-button:active{
-  transform: translateY(1px) scale(0.97);
-  box-shadow: 0 3px 8px rgba(0,0,0,.4);
-  filter: brightness(0.95);
-}
+    button:active{
+      transform: translateY(1px) scale(0.97);
+      box-shadow: 0 3px 8px rgba(0,0,0,.4);
+      filter: brightness(0.95);
+    }
 
-/* 讓大按鈕看起來更有層次 */
-.btn{
-  box-shadow: 0 6px 16px rgba(0,0,0,.3);
-}
-
-/* 導覽列按鈕也有反饋 */
-.nav button:active{
-  transform: scale(0.95);
-}
-/* =========================
-   顯示頁底部宣傳區
-   ========================= */
-
-.promo{
-  margin-top:20px;
-  padding:16px;
-  background:linear-gradient(135deg,#020617,#020617);
-  border-radius:var(--radius);
-  border:1px solid rgba(255,255,255,.1);
-}
-
-.promo h2{
-  margin:0 0 14px;
-  font-size:18px;
-  font-weight:900;
-  text-align:center;
-}
-
-.promo-grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:12px;
-}
-
-.promo-card{
-  background:var(--panel);
-  border-radius:12px;
-  padding:14px;
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.promo-card h3{
-  margin:0 0 8px;
-  font-size:16px;
-}
-
-.promo-card ul{
-  padding-left:18px;
-  margin:0;
-}
-
-.promo-card li{
-  margin-bottom:8px;
-  font-size:14px;
-}
-
-.price{
-  font-size:18px;
-  font-weight:900;
-}
-
-.note{
-  font-size:13px;
-  color:var(--muted);
-}
-
-.promo-reward{
-  margin-top:14px;
-  padding:14px;
-  background:#020617;
-  border-radius:12px;
-  border:1px dashed rgba(56,189,248,.5);
-}
-
-.promo-reward h3{
-  margin:0 0 6px;
-  font-size:16px;
-}
-
-.promo-reward ul{
-  margin:6px 0 0;
-  padding-left:18px;
-  font-size:14px;
-}
-
-/* 平板以上橫向排 */
-@media (min-width:768px){
-  .promo-grid{
-    grid-template-columns:1fr 1fr;
-  }
-}
-/* =========================
-   宣傳區自動淡入效果
-   ========================= */
-.promo{
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 1s ease,
-    transform 1s ease;
-}
-
-/* 觸發顯示 */
-.promo.show{
-  opacity: 1;
-  transform: translateY(0);
-}
-
+    .nav button:active{
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
-  <!-- JS 與 HTML 結構維持原本，不影響功能 -->
-   <header>
-  <h1>預約系統</h1>
-  <div class="nav">
-    <button id="nav-display" class="active">顯示</button>
-    <button id="nav-counter">櫃檯</button>
-  </div>
-</header>
-
-<main>
-  <!-- ===== 顯示頁 ===== -->
-  <section id="page-display" class="card display">
-    <div class="label">目前叫號</div>
-    <div id="nowNumber" class="now">—</div>
-
-    <div class="label">等待中</div>
-    <div id="waitingList" class="queue"></div>
-    <!-- ===== 宣傳內容（只顯示頁底部） ===== -->
-<div class="promo">
-  <h2>🎯 地鼠遊戲玩法與價格</h2>
-
-  <div class="promo-grid">
-    <!-- NPC 模式 -->
-    <div class="promo-card">
-      <h3>🤖 NPC 地鼠模式</h3>
-      <ul>
-        <li><strong>單人打擊模式</strong><br>30 元／局</li>
-        <li><strong>混合雙打模式</strong><br>25 元／人／局</li>
-      </ul>
+  <header>
+    <h1>預約系統</h1>
+    <div class="nav">
+      <button id="nav-display" class="active">顯示</button>
+      <button id="nav-counter">櫃檯</button>
     </div>
+  </header>
 
-    <!-- 多人組團 -->
-    <div class="promo-card">
-      <h3>👥 多人組團模式</h3>
-      <p class="price">20 元／人／局</p>
-      <p class="note">（最低 3 人）</p>
-    </div>
-  </div>
+  <main>
+    <section id="page-display" class="card display">
+      <div class="label">目前叫號</div>
+      <div id="nowNumber" class="now">—</div>
 
-  <!-- 獎勵制度 -->
-  <div class="promo-reward">
-    <h3>🎁 獎勵制度</h3>
-    <p>✨ 任一模式 <strong>滿 2 局</strong></p>
-    <ul>
-      <li>送一瓶 <strong>可爾必思水語</strong></li>
-      <li>🎯 <strong>每局</strong> 再送 <strong>5 元折價券</strong></li>
-    </ul>
-  </div>
-</div>
+      <div class="label">等待中</div>
+      <div id="waitingList" class="queue"></div>
+    </section>
 
-  </section>
+    <section id="page-login" class="card login" style="display:none">
+      <input id="password" type="password" placeholder="請輸入櫃檯密碼">
+      <button id="loginBtn">登入櫃檯</button>
+      <div id="loginError" class="error"></div>
+    </section>
 
-  <!-- ===== 登入頁 ===== -->
-  <section id="page-login" class="card login" style="display:none">
-    <input id="password" type="password" placeholder="請輸入櫃檯密碼">
-    <button id="loginBtn">登入櫃檯</button>
-    <div id="loginError" class="error"></div>
-  </section>
-
-  <!-- ===== 櫃檯管理介面 ===== -->
-  <section id="page-counter" class="card" style="display:none">
-
-
-    <!-- 操作按鈕 -->
-    <div class="counter-actions">
-      <button id="addNumber" class="btn primary">新增號碼</button>
-      <button id="callNext" class="btn secondary">叫下一號</button>
-      <button id="resetAll" class="btn danger">全部重置</button>
-    </div>
-
-    <!--  刪除號碼 -->
-    <div class="card">
-      <h3>刪除等待中的號碼</h3>
-      <input id="deleteNumber" type="number" placeholder="輸入要刪除的號碼">
-      <button id="deleteNumberBtn" class="btn danger">刪除號碼</button>
-    </div>
-
-    <!--  回復號碼 -->
-    <div class="card">
-      <h3>回復誤刪的號碼</h3>
-      <input id="restoreNumber" type="number" placeholder="輸入要回復的號碼">
-      <button id="restoreNumberBtn" class="btn primary">回復號碼</button>
-    </div>
-
-    <!-- 狀態 -->
-    <div class="stats">
-      <div class="stat">
-        <h3>目前叫號</h3>
-        <p id="statCurrent">—</p>
+    <section id="page-counter" class="card" style="display:none">
+      <div class="counter-actions">
+        <button id="addNumber" class="btn primary">新增號碼</button>
+        <button id="callNext" class="btn secondary">叫下一號</button>
+        <button id="resetAll" class="btn danger">全部重置</button>
       </div>
-      <div class="stat">
-        <h3>等待人數</h3>
-        <p id="statWaiting">0</p>
+
+      <div class="card">
+        <h3>刪除等待中的號碼</h3>
+        <input id="deleteNumber" type="number" placeholder="輸入要刪除的號碼">
+        <button id="deleteNumberBtn" class="btn danger">刪除號碼</button>
       </div>
-      <div class="stat">
-        <h3>最後號碼</h3>
-        <p id="statLast">0</p>
+
+      <div class="card">
+        <h3>回復誤刪的號碼</h3>
+        <input id="restoreNumber" type="number" placeholder="輸入要回復的號碼">
+        <button id="restoreNumberBtn" class="btn primary">回復號碼</button>
       </div>
-    </div>
 
-  </section>
-</main>
+      <div class="stats">
+        <div class="stat">
+          <h3>目前叫號</h3>
+          <p id="statCurrent">—</p>
+        </div>
+        <div class="stat">
+          <h3>等待人數</h3>
+          <p id="statWaiting">0</p>
+        </div>
+        <div class="stat">
+          <h3>最後號碼</h3>
+          <p id="statLast">0</p>
+        </div>
+      </div>
+    </section>
+  </main>
 
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-  import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+    import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCDcLUp0hPrRIPDqV7nEGIY_p3547ol3EQ",
-    authDomain: "food-ad3d0.firebaseapp.com",
-    projectId: "food-ad3d0",
-    storageBucket: "food-ad3d0.firebasestorage.app",
-    messagingSenderId: "1098582550820",
-    appId: "1:1098582550820:web:92450df87636f18979ebb1",
-    measurementId: "G-76JKJ8W3B2"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyCDcLUp0hPrRIPDqV7nEGIY_p3547ol3EQ",
+      authDomain: "food-ad3d0.firebaseapp.com",
+      projectId: "food-ad3d0",
+      storageBucket: "food-ad3d0.firebasestorage.app",
+      messagingSenderId: "1098582550820",
+      appId: "1:1098582550820:web:92450df87636f18979ebb1",
+      measurementId: "G-76JKJ8W3B2"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
 
-  const state = {
-    current: null,
-    last: 0,
-    queue: [],
-    called: []
-  };
+    const state = {
+      current: null,
+      last: 0,
+      queue: [],
+      called: []
+    };
 
-  const stateDoc = doc(db, "queueState", "main");
+    const stateDoc = doc(db, "queueState", "main");
 
-  async function saveToFirebase() {
-    await setDoc(stateDoc, state);
-  }
+    async function saveToFirebase() {
+      await setDoc(stateDoc, state);
+    }
 
-function render() {
-  document.getElementById('nowNumber').textContent = state.current ?? '—';
-  document.getElementById('statCurrent').textContent = state.current ?? '—';
-  document.getElementById('statWaiting').textContent = state.queue.length;
-  document.getElementById('statLast').textContent = state.last;
+    function render() {
+      document.getElementById('nowNumber').textContent = state.current ?? '—';
+      document.getElementById('statCurrent').textContent = state.current ?? '—';
+      document.getElementById('statWaiting').textContent = state.queue.length;
+      document.getElementById('statLast').textContent = state.last;
 
-  const list = document.getElementById('waitingList');
-  list.innerHTML = '';
+      const list = document.getElementById('waitingList');
+      list.innerHTML = '';
 
-  if(state.queue.length === 0){
-    const empty = document.createElement('div');
-    empty.className = 'badge';
-    empty.textContent = '等待中…';
-    list.appendChild(empty);
-  } else {
-    state.queue.slice(0,6).forEach((n, index)=>{
-      const wrapper = document.createElement('div');
-      wrapper.style.position = 'relative';
-      wrapper.style.display = 'flex';
-      wrapper.style.flexDirection = 'column';
-      wrapper.style.alignItems = 'center';
+      if(state.queue.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'badge';
+        empty.textContent = '等待中…';
+        list.appendChild(empty);
+      } else {
+        state.queue.slice(0,6).forEach((n, index)=>{
+          const wrapper = document.createElement('div');
+          wrapper.style.position = 'relative';
+          wrapper.style.display = 'flex';
+          wrapper.style.flexDirection = 'column';
+          wrapper.style.alignItems = 'center';
 
-      if(index < 3){ // 最近三個號碼才顯示預計等待時間
-        const timeLabel = document.createElement('div');
-        let seconds = (index + 1) * 30;
-        let minutes = Math.floor(seconds / 60);
-        let sec = seconds % 60;
-        timeLabel.textContent = `預計於 ${minutes > 0 ? minutes+'分' : ''}${sec > 0 ? sec+'秒' : ''}`;
-        timeLabel.style.fontSize = '12px';
-        timeLabel.style.color = '#ef4444';
-        timeLabel.style.marginBottom = '4px';
-        wrapper.appendChild(timeLabel);
+          if(index < 3){
+            const timeLabel = document.createElement('div');
+            let seconds = (index + 1) * 30;
+            let minutes = Math.floor(seconds / 60);
+            let sec = seconds % 60;
+            timeLabel.textContent = `預計於 ${minutes > 0 ? minutes+'分' : ''}${sec > 0 ? sec+'秒' : ''}`;
+            timeLabel.style.fontSize = '12px';
+            timeLabel.style.color = '#ef4444';
+            timeLabel.style.marginBottom = '4px';
+            wrapper.appendChild(timeLabel);
+          }
+
+          const b = document.createElement('div');
+          b.className = 'badge';
+          b.textContent = n;
+
+          if(index < 3){
+            b.style.background = '#ef4444';
+            b.style.color = '#020617';
+          }
+
+          wrapper.appendChild(b);
+          list.appendChild(wrapper);
+        });
       }
+    }
 
-      const b = document.createElement('div');
-      b.className = 'badge';
-      b.textContent = n;
-
-      if(index < 3){
-        b.style.background = '#ef4444';
-        b.style.color = '#020617';
+    onSnapshot(stateDoc, (docSnap)=>{
+      if(docSnap.exists()){
+        Object.assign(state, docSnap.data());
+        render();
       }
-
-      wrapper.appendChild(b);
-      list.appendChild(wrapper);
     });
-  }
-}
 
-  
-
-  // 即時同步
-  onSnapshot(stateDoc, (docSnap)=>{
-    if(docSnap.exists()){
-      Object.assign(state, docSnap.data());
-      render();
-    }
-  });
-
-  document.getElementById('addNumber').onclick = async ()=>{
-    state.last++;
-    state.queue.push(state.last);
-    await saveToFirebase();
-  };
-
-  document.getElementById('callNext').onclick = async ()=>{
-    if(state.queue.length === 0){ alert('目前沒有等待號碼'); return; }
-    const next = state.queue.shift();
-    state.current = next;
-    state.called.push(next);
-    await saveToFirebase();
-  };
-
-  document.getElementById('resetAll').onclick = async ()=>{
-    if(confirm('確定全部重置？')){
-      state.current=null;
-      state.last=0;
-      state.queue=[];
-      state.called=[];
+    document.getElementById('addNumber').onclick = async ()=>{
+      state.last++;
+      state.queue.push(state.last);
       await saveToFirebase();
+    };
+
+    document.getElementById('callNext').onclick = async ()=>{
+      if(state.queue.length === 0){ 
+        alert('目前沒有等待號碼'); 
+        return; 
+      }
+      const next = state.queue.shift();
+      state.current = next;
+      state.called.push(next);
+      await saveToFirebase();
+    };
+
+    document.getElementById('resetAll').onclick = async ()=>{
+      if(confirm('確定全部重置？')){
+        state.current = null;
+        state.last = 0;
+        state.queue = [];
+        state.called = [];
+        await saveToFirebase();
+      }
+    };
+
+    document.getElementById('deleteNumberBtn').onclick = async ()=>{
+      const input = document.getElementById('deleteNumber');
+      const n = parseInt(input.value);
+
+      if(!state.queue.includes(n)){
+        alert('此號碼不在等待中');
+        return;
+      }
+
+      state.queue = state.queue.filter(x => x !== n);
+      await saveToFirebase();
+
+      input.value = '';
+      input.blur();
+    };
+
+    document.getElementById('restoreNumberBtn').onclick = async ()=>{
+      const input = document.getElementById('restoreNumber');
+      const n = parseInt(input.value);
+
+      if(state.queue.includes(n) || state.called.includes(n)){
+        alert('⚠️ 此號碼已存在，避免重複叫號');
+        return;
+      }
+
+      state.queue.unshift(n);
+      await saveToFirebase();
+
+      input.value = '';
+      input.blur();
+    };
+
+    const pageDisplay = document.getElementById('page-display');
+    const pageLogin = document.getElementById('page-login');
+    const pageCounter = document.getElementById('page-counter');
+
+    function show(p){
+      pageDisplay.style.display = 'none';
+      pageLogin.style.display = 'none';
+      pageCounter.style.display = 'none';
+      p.style.display = 'block';
     }
-  };
 
-document.getElementById('deleteNumberBtn').onclick = async ()=>{
-  const input = document.getElementById('deleteNumber');
-  const n = parseInt(input.value);
+    document.getElementById('nav-display').onclick = ()=>show(pageDisplay);
+    document.getElementById('nav-counter').onclick = ()=>show(pageLogin);
 
-  if(!state.queue.includes(n)){
-    alert('此號碼不在等待中');
-    return;
-  }
+    const ADMIN_PASSWORD = '123';
+    document.getElementById('loginBtn').onclick = ()=>{
+      if(document.getElementById('password').value === ADMIN_PASSWORD){
+        show(pageCounter);
+      } else {
+        document.getElementById('loginError').textContent = '密碼錯誤';
+      }
+    };
 
-  state.queue = state.queue.filter(x=>x!==n);
-  await saveToFirebase();
-
-  input.value = '';
-  input.blur();
-};
-
-document.getElementById('restoreNumberBtn').onclick = async ()=>{
-  const input = document.getElementById('restoreNumber');
-  const n = parseInt(input.value);
-
-  if(state.queue.includes(n) || state.called.includes(n)){
-    alert('⚠️ 此號碼已存在，避免重複叫號');
-    return;
-  }
-
-  state.queue.unshift(n);
-  await saveToFirebase();
-
- 
-  input.value = '';
-  input.blur();
-};
-
-
-  const pageDisplay=document.getElementById('page-display');
-  const pageLogin=document.getElementById('page-login');
-  const pageCounter=document.getElementById('page-counter');
-
-  function show(p){
-    pageDisplay.style.display='none';
-    pageLogin.style.display='none';
-    pageCounter.style.display='none';
-    p.style.display='block';
-  }
-
-  document.getElementById('nav-display').onclick=()=>show(pageDisplay);
-  document.getElementById('nav-counter').onclick=()=>show(pageLogin);
-
-  const ADMIN_PASSWORD = '123';/////////////////////////////////////////////////密碼
-  document.getElementById('loginBtn').onclick=()=>{
-    if(document.getElementById('password').value===ADMIN_PASSWORD){
-      show(pageCounter);
-    } else {
-      document.getElementById('loginError').textContent='密碼錯誤';
-    }
-  };
-
-  render();
-
-setTimeout(()=>{
-  const promo = document.querySelector('#page-display .promo');
-  if(promo) promo.classList.add('show');
-}, 1200);
-
-</script>
-
-
-
+    render();
+  </script>
 </body>
 </html>
-
-
-
-
-
