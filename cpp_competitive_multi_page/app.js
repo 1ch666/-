@@ -1,0 +1,20 @@
+(()=>{
+  const P=window.PROBLEMS||[],groups=window.COMBINED_GROUPS||[],platforms=window.PLATFORMS||[],page=document.body.dataset.page;
+  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const idOf=x=>(x.url.match(/[?&]problemid=([^&]+)/)||[])[1];
+  const statHtml=pairs=>pairs.map(([label,value])=>'<div class="stat"><b>'+value+'</b><span>'+label+'</span></div>').join('');
+  const levelRank=x=>Number(String(x.level||'L9').slice(1))||9;
+  function stats(items){const topics=new Set(items.map(x=>x.topic)).size,basic=items.filter(x=>levelRank(x)<=2).length;return statHtml([['唯一題目',items.length],['主題',topics],['L1–L2',basic],['L3–L5',items.length-basic]])}
+  function row(x,i){return '<tr><td class="order">'+i+'</td><td><a class="title" target="_blank" rel="noopener" href="'+x.url+'">'+esc(x.title)+'</a></td><td>'+esc(x.topic)+'<span class="sub">'+esc(x.subtopic||'')+'</span></td><td><span class="pill">'+esc(x.level)+'</span></td><td>'+esc(x.difficulty||x.type||'—')+'</td><td>'+esc(x.minutes)+' 分</td></tr>'}
+  function table(items){return '<div class="table-wrap"><table><thead><tr><th>順序</th><th>題目</th><th>主題</th><th>階段</th><th>難度</th><th>限時</th></tr></thead><tbody>'+items.map((x,i)=>row(x,i+1)).join('')+'</tbody></table></div>'}
+  function filtered(items){const q=(document.querySelector('#search')?.value||'').trim().toLowerCase(),l=document.querySelector('#level')?.value||'all';return items.filter(x=>(l==='all'||x.level===l)&&(!q||[x.title,x.topic,x.subtopic,x.difficulty,x.method].join(' ').toLowerCase().includes(q)))}
+  function section(id,name,desc,items){return '<section class="method" id="'+id+'"><div class="method-head"><div><h2>'+esc(name)+'</h2><p>'+esc(desc)+'</p></div><span>'+items.length+' 題</span></div>'+table(items)+'</section>'}
+  function setToc(entries){const root=document.querySelector('#tocLinks');if(!root)return;root.innerHTML=entries.map(([id,label])=>'<a href="#'+id+'">'+esc(label)+'</a>').join('');root.querySelectorAll('a').forEach(a=>a.onclick=()=>{if(innerWidth<=850)document.body.classList.add('toc-collapsed')})}
+  function render(){const platform=document.body.dataset.platform,items=P.filter(x=>x.platform===platform),rows=filtered(items);document.querySelector('#summary').innerHTML=stats(items);let html='',toc=[];if(platform==='ZeroJudge'){groups.forEach(g=>{const ids=new Set(g.ids),part=rows.filter(x=>ids.has(idOf(x)));if(part.length){const sid='group-'+g.id;html+=section(sid,g.name,g.desc,part);toc.push([sid,g.name])}})}else{html='<section class="method" id="platform-list">'+table(rows)+'</section>';toc=[['platform-list','完整題單']]}document.querySelector('#problemRoot').innerHTML=html;document.querySelector('#empty').style.display=rows.length?'none':'block';setToc(toc)}
+  function setupToc(){document.querySelector('#tocClose')?.addEventListener('click',()=>document.body.classList.add('toc-collapsed'));document.querySelector('#tocOpen')?.addEventListener('click',()=>document.body.classList.remove('toc-collapsed'));if(innerWidth<=850)document.body.classList.add('toc-collapsed')}
+  setupToc();
+  if(page==='index'){
+    document.querySelector('#summary').innerHTML=statHtml([['唯一題目',P.length],['平台',platforms.length],['APCS／ZJ',P.filter(x=>x.platform==='ZeroJudge').length],['主題',new Set(P.map(x=>x.topic)).size]]);
+    document.querySelector('#platformGrid').innerHTML=platforms.map(([p,file,label,desc])=>{const items=P.filter(x=>x.platform===p);return '<a class="platform-card" href="'+file+'"><h3>'+label+'</h3><p>'+desc+'</p><small>'+items.length+' 題</small></a>'}).join('')
+  }else{render();['search','level'].forEach(id=>document.querySelector('#'+id).addEventListener(id==='search'?'input':'change',render));document.querySelector('#print').onclick=()=>window.print()}
+})();
