@@ -15,6 +15,6 @@
   function render(){const platform=document.body.dataset.platform,items=P.filter(x=>x.platform===platform),rows=filtered(items);document.querySelector('#summary').innerHTML=stats(items);let html='',toc=[];if(platform==='ZeroJudge'){groups.forEach(g=>{const ids=new Set(g.ids),part=rows.filter(x=>ids.has(idOf(x)));if(part.length){const sid='group-'+g.id;html+=section(sid,g.name,g.desc,part);toc.push([sid,g.name])}})}else{html='<section class="method" id="platform-list">'+table(rows)+'</section>';toc=[['platform-list','完整題單']]}document.querySelector('#problemRoot').innerHTML=html;document.querySelector('#empty').style.display=rows.length?'none':'block';setToc(toc)}
   function setupToc(){document.querySelector('#tocClose')?.addEventListener('click',()=>document.body.classList.add('toc-collapsed'));document.querySelector('#tocOpen')?.addEventListener('click',()=>document.body.classList.remove('toc-collapsed'));if(innerWidth<=850)document.body.classList.add('toc-collapsed')}
   setupToc();
-  if(page==='roadmap'){renderRoadmap();['search','level'].forEach(id=>document.querySelector('#'+id).addEventListener(id==='search'?'input':'change',renderRoadmap));document.querySelector('#print').onclick=()=>window.print()}
-  else{render();['search','level'].forEach(id=>document.querySelector('#'+id).addEventListener(id==='search'?'input':'change',render));document.querySelector('#print').onclick=()=>window.print()}
+  if(page==='roadmap'){renderRoadmap();['search','level'].forEach(id=>document.querySelector('#'+id).addEventListener(id==='search'?'input':'change',renderRoadmap))}
+  else{render();['search','level'].forEach(id=>document.querySelector('#'+id).addEventListener(id==='search'?'input':'change',render))}
 })();
