@@ -29,7 +29,7 @@
     const data=await response.json();
     if(!keys.every(k=>Array.isArray(data[k]))) throw new Error('題庫格式錯誤');
     keys.forEach(k=>window[k]=data[k]);
-    const script=document.createElement('script');script.src='app.js?v=20261008-auth';
+    const script=document.createElement('script');script.src='app.js?v=20261008-lectures';
     await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error('頁面載入失敗'));document.head.append(script)});
     panel.hidden=true;shell.hidden=false;nav.hidden=false;document.body.classList.remove('auth-loading');
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
