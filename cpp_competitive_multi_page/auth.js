@@ -45,7 +45,6 @@
       form.password.value='';
       if(!response.ok){message.textContent=data.error||'登入失敗，請稍後重試。';return;}
       session={access_token:data.access_token,expires_at:data.expires_at};
-      try{sessionStorage.setItem(storageKey,JSON.stringify(session))}catch{}
       await load();
     }catch{message.textContent='連線或載入失敗，請稍後重試。'}finally{submit.disabled=false;}
   });
@@ -54,9 +53,10 @@
     if(token) request(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token}}).catch(()=>{});
     location.reload();
   });
-  addEventListener('pageshow',event=>{if(event.persisted)location.reload()});
+  addEventListener('pagehide',()=>{clear();locked('請重新登入');form.reset()});
+  addEventListener('pageshow',event=>{if(event.persisted){clear();locked('請重新登入');location.reload()}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.expires_at*1000<=Date.now()){clear();location.reload()}});
-  locked();
-  try{session=JSON.parse(sessionStorage.getItem(storageKey)||'null')}catch{clear()}
-  load().catch(()=>locked('題庫載入失敗，請重新登入。'));
+  // Login tokens live only in this document's memory; discard legacy cached sessions.
+  clear();
+  locked('請登入');
 })();
