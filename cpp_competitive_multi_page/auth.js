@@ -29,7 +29,7 @@
     const data=await response.json();
     if(!keys.every(k=>Array.isArray(data[k]))) throw new Error('題庫格式錯誤');
     keys.forEach(k=>window[k]=data[k]);
-    const script=document.createElement('script');script.src='app.js?v=20261008-lectures';
+    const script=document.createElement('script');script.src='app.js?v=20261008-navigation';
     await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error('頁面載入失敗'));document.head.append(script)});
     panel.hidden=true;shell.hidden=false;nav.hidden=false;document.body.classList.remove('auth-loading');
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
@@ -53,6 +53,49 @@
     if(token) request(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token}}).catch(()=>{});
     location.reload();
   });
+  // Keep the authenticated document alive for same-tab site navigation only.
+  // No token is written to storage, URLs, or history; a real reload starts locked.
+  const siteRoot=new URL('./',location.href);
+  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html']);
+  let navigationId=0, navigationRequest;
+  function isSitePage(url){return url.origin===siteRoot.origin&&url.pathname.startsWith(siteRoot.pathname)&&sitePages.has(url.pathname.slice(siteRoot.pathname.length))}
+  async function navigate(url,fromHistory=false){
+    const id=++navigationId;
+    navigationRequest?.abort();
+    navigationRequest=new AbortController();
+    nav.setAttribute('aria-busy','true');
+    try{
+      if(!session?.access_token||session.expires_at*1000<=Date.now()+5000){clear();location.reload();return;}
+      const response=await fetch(url.href,{cache:'no-store',credentials:'omit',signal:navigationRequest.signal});
+      if(!response.ok)throw new Error('頁面載入失敗');
+      const parsed=new DOMParser().parseFromString(await response.text(),'text/html');
+      const nextShell=parsed.querySelector('.site-layout');
+      if(!nextShell||!['roadmap','platform'].includes(parsed.body.dataset.page))throw new Error('頁面格式錯誤');
+      if(id!==navigationId||!session)return;
+      shell.replaceChildren(...Array.from(nextShell.childNodes).map(n=>document.importNode(n,true)));
+      document.body.dataset.page=parsed.body.dataset.page;
+      document.body.dataset.platform=parsed.body.dataset.platform||'';
+      document.title=parsed.title;
+      document.body.classList.remove('toc-collapsed');
+      window.renderPracticePage();
+      if(!fromHistory)history.pushState(null,'',url.href);
+      nav.querySelectorAll('a').forEach(a=>{if(new URL(a.href).pathname===url.pathname)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+      window.scrollTo(0,0);
+    }catch(error){
+      if(id!==navigationId||error.name==='AbortError')return;
+      if(fromHistory){location.reload();return;}
+      alert('頁面載入失敗，已保留目前頁面與登入狀態，請重試。');
+    }finally{if(id===navigationId)nav.removeAttribute('aria-busy')}
+  }
+  nav.addEventListener('click',event=>{
+    const link=event.target.closest('a');
+    if(!link||!session||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
+    const url=new URL(link.href);
+    if(!isSitePage(url))return;
+    event.preventDefault();
+    navigate(url);
+  });
+  addEventListener('popstate',()=>{const url=new URL(location.href);if(session&&isSitePage(url))navigate(url,true);else location.reload()});
   addEventListener('pagehide',()=>{clear();locked('請重新登入');form.reset()});
   addEventListener('pageshow',event=>{if(event.persisted){clear();locked('請重新登入');location.reload()}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.expires_at*1000<=Date.now()){clear();location.reload()}});
