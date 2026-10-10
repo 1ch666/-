@@ -57,6 +57,8 @@
   // Keep the authenticated document alive for same-tab site navigation only.
   // No token is written to storage, URLs, or history; a real reload starts locked.
   const siteRoot=new URL('./',location.href);
+  // Accordion heights change; native restoration would override section positioning.
+  history.scrollRestoration='manual';
   const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html']);
   let navigationId=0, navigationRequest;
   let renderedPage=location.pathname+location.search;
