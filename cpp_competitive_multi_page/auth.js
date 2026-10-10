@@ -29,9 +29,10 @@
     const data=await response.json();
     if(!keys.every(k=>Array.isArray(data[k]))) throw new Error('題庫格式錯誤');
     keys.forEach(k=>window[k]=data[k]);
-    const script=document.createElement('script');script.src='app.js?v=20261008-navigation';
+    const script=document.createElement('script');script.src='app.js?v=20261010-toc';
     await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error('頁面載入失敗'));document.head.append(script)});
     panel.hidden=true;shell.hidden=false;nav.hidden=false;document.body.classList.remove('auth-loading');
+    if(location.hash)window.scrollPracticeSection(location.hash);
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
   }
   form.addEventListener('submit',async event=>{
@@ -58,6 +59,7 @@
   const siteRoot=new URL('./',location.href);
   const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html']);
   let navigationId=0, navigationRequest;
+  let renderedPage=location.pathname+location.search;
   function isSitePage(url){return url.origin===siteRoot.origin&&url.pathname.startsWith(siteRoot.pathname)&&sitePages.has(url.pathname.slice(siteRoot.pathname.length))}
   async function navigate(url,fromHistory=false){
     const id=++navigationId;
@@ -77,10 +79,11 @@
       document.body.dataset.platform=parsed.body.dataset.platform||'';
       document.title=parsed.title;
       document.body.classList.remove('toc-collapsed');
-      window.renderPracticePage();
       if(!fromHistory)history.pushState(null,'',url.href);
+      renderedPage=url.pathname+url.search;
+      window.renderPracticePage();
       nav.querySelectorAll('a').forEach(a=>{if(new URL(a.href).pathname===url.pathname)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-      window.scrollTo(0,0);
+      if(!url.hash||!window.scrollPracticeSection(url.hash))window.scrollTo(0,0);
     }catch(error){
       if(id!==navigationId||error.name==='AbortError')return;
       if(fromHistory){location.reload();return;}
@@ -95,7 +98,17 @@
     event.preventDefault();
     navigate(url);
   });
-  addEventListener('popstate',()=>{const url=new URL(location.href);if(session&&isSitePage(url))navigate(url,true);else location.reload()});
+  addEventListener('popstate',()=>{
+    const url=new URL(location.href);
+    if(!session||!isSitePage(url)){location.reload();return;}
+    if(url.pathname+url.search===renderedPage){
+      // Fragment history is an in-page jump, not a page fetch or re-render.
+      ++navigationId;navigationRequest?.abort();nav.removeAttribute('aria-busy');
+      if(!url.hash||!window.scrollPracticeSection(url.hash))window.scrollTo(0,0);
+      return;
+    }
+    navigate(url,true);
+  });
   addEventListener('pagehide',()=>{clear();locked('請重新登入');form.reset()});
   addEventListener('pageshow',event=>{if(event.persisted){clear();locked('請重新登入');location.reload()}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.expires_at*1000<=Date.now()){clear();location.reload()}});
