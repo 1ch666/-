@@ -1,7 +1,7 @@
 (()=>{
   'use strict';
   const endpoint='https://wandbox.org/api/compile.json';
-  const initial='#include <iostream>\nusing namespace std;\n\nint main() {\n    long long a, b;\n    if (cin >> a >> b) cout << a + b << "\\n";\n    return 0;\n}\n';
+  const initial='# include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    \n}\n';
   let draft={code:initial,input:'3 5\n',standard:'c++17'},root=null,job=null,nextRun=0;
   function save(){if(root?.isConnected){draft={code:root.querySelector('#cppCode').value,input:root.querySelector('#cppInput').value,standard:root.querySelector('#cppStandard').value}}}
   window.leaveCompilerPage=()=>{save();job?.abort();job=null;root=null};
