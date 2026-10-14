@@ -25,6 +25,22 @@
       <section class="compiler-results"><h2>標準輸出（stdout）</h2><pre id="cppOutput" tabindex="0">—</pre><h2>錯誤輸出（stderr）</h2><pre id="cppError" tabindex="0">—</pre><h2>編譯訊息</h2><pre id="cppDiagnostics" tabindex="0">—</pre></section>`;
     const current=root,code=root.querySelector('#cppCode'),standard=root.querySelector('#cppStandard'),form=root.querySelector('#cppForm'),run=root.querySelector('#cppRun'),stop=root.querySelector('#cppStop'),status=root.querySelector('#cppStatus');
     code.value=draft.code;standard.value=draft.standard;
+    const enter=event=>{
+      if(event.isComposing||!window.cppEnterEdit)return;
+      const edit=window.cppEnterEdit(code.value,code.selectionStart,code.selectionEnd);
+      if(code.value.length-(edit.end-edit.start)+edit.insert.length>code.maxLength)return;
+      event.preventDefault();
+      code.setSelectionRange(edit.start,edit.end);
+      // Native insertion preserves browser undo history where supported.
+      if(!document.execCommand('insertText',false,edit.insert))code.setRangeText(edit.insert,edit.start,edit.end,'end');
+      code.setSelectionRange(edit.caret,edit.caret);
+      code.dispatchEvent(new Event('input',{bubbles:true}));
+    };
+    code.addEventListener('keydown',event=>{
+      if(event.key==='Enter'&&!event.ctrlKey&&!event.metaKey&&!event.altKey&&!event.shiftKey)enter(event);
+    });
+    // Mobile keyboards do not always emit a usable keydown event.
+    code.addEventListener('beforeinput',event=>{if(event.inputType==='insertLineBreak'&&event.cancelable)enter(event)});
     // The textarea remains the accessible editing surface; highlighting is inert.
     if(window.highlightCpp){
       const shell=document.createElement('div'),paint=document.createElement('pre');
