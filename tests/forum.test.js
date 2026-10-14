@@ -64,6 +64,11 @@ test('Database enforces identity uniqueness, verification, ownership and private
     await db.query("select public.forum_write($1,'profile',$2)",[c,{display_name:'同學乙'}]);
     await db.query("select public.forum_write($1,'comment',$2)",[c,{post_id:post.id,body:'正常留言'}]);
     await assert.rejects(db.query('update auth.users set email=$1 where id=$2',['newperson@gmail.com',a]),/changes are disabled/);
+    // Same atomic id+author predicate as the API: another member cannot delete.
+    assert.equal((await db.query('delete from public.forum_posts where id=$1 and author_id=$2 returning id',[post.id,c])).rows.length,0);
+    assert.equal((await db.query('select count(*)::int n from public.forum_comments where post_id=$1',[post.id])).rows[0].n,1);
+    assert.equal((await db.query('delete from public.forum_posts where id=$1 and author_id=$2 returning id',[post.id,a])).rows.length,1);
+    assert.equal((await db.query('select count(*)::int n from public.forum_comments where post_id=$1',[post.id])).rows[0].n,0);
     for(const role of ['anon','authenticated']){
       await db.exec('set role '+role);
       for(const table of ['forum_auth_links','forum_identities','forum_profiles','forum_posts','forum_comments'])await assert.rejects(db.query('select * from public.'+table),/permission denied/);

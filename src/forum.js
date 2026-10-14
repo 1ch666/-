@@ -43,6 +43,9 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
       }else if(screen==='thread'){
         message('讀取文章…');const data=await request('thread',{id:threadId,page:commentPage});if(ticket!==generation)return;
         content.innerHTML=`<article class="forum-post"><h2>${esc(data.post.title)}</h2><p class="forum-meta">${esc(data.post.author?.display_name||'會員')} · ${esc(date(data.post.created_at))}</p><div class="markdown-body">${renderMarkdown(data.post.body)}</div></article><h2>留言</h2><ol class="forum-comments">${data.comments.map(c=>`<li><p class="forum-meta">${esc(c.author?.display_name||'會員')} · ${esc(date(c.created_at))}</p><div class="markdown-body">${renderMarkdown(c.body)}</div></li>`).join('')}</ol>${data.comments.length?'':'<p>尚無留言。</p>'}${pager(commentPage,data.more,'comments')}<h2>新增留言</h2>${member?`<form data-form="comment">${editor(10000)}<button>送出留言</button></form>`:needAccount()}`;message('');
+        if(member&&me?.member_id===data.post.author_id){
+          content.querySelector('.forum-meta').insertAdjacentHTML('afterend','<button type="button" data-action="delete-post" aria-label="刪除自己的文章" title="刪除自己的文章">🗑 刪除文章</button>');
+        }
       }else if(screen==='compose'){
         content.innerHTML='<h2>發表文章</h2>'+(member?`<form data-form="post">${field('標題','title','text','minlength="2" maxlength="120"')}${editor()}<button>發布文章</button></form>`:needAccount());
       }else if(screen==='profile'){
@@ -119,6 +122,15 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
   }
   async function click(event){
     const button=event.target.closest('button');if(!button)return;
+    if(button.dataset.action==='delete-post'){
+      if(!member||!window.confirm('確定刪除這篇文章？文章及其所有留言將永久刪除，無法復原。'))return;
+      const ticket=generation,id=threadId;button.disabled=true;message('刪除中…');
+      try{
+        await request('delete_post',{id});if(ticket!==generation)return;
+        screen='list';listPage=0;threadId='';await render();message('文章及其留言已刪除。');
+      }catch(error){if(ticket===generation){message(error.message,true);button.disabled=false}}
+      return;
+    }
     if(button.dataset.action==='google'){
       const ticket=generation;button.disabled=true;message('請在 Google 視窗完成登入…');
       try{const data=await googleLogin(request);if(ticket!==generation)return;accountSession(data);

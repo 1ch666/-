@@ -117,7 +117,7 @@ Deno.serve(async req=>{
     }
     if(action==='thread'){
       const id=uuid(input.id),offset=page(input.page)*30;
-      const posts=await db('forum_posts?id=eq.'+id+'&select=id,title,body,created_at,author:forum_profiles(display_name)');
+      const posts=await db('forum_posts?id=eq.'+id+'&select=id,author_id,title,body,created_at,author:forum_profiles(display_name)');
       if(!posts.length)throw new HttpError(404,'文章不存在');
       const comments=await db('forum_comments?post_id=eq.'+id+'&select=id,body,created_at,author:forum_profiles(display_name)&order=created_at.asc,id.asc&limit=31&offset='+offset);
       return reply(200,{post:posts[0],comments:comments.slice(0,30),more:comments.length>30});
@@ -136,6 +136,15 @@ Deno.serve(async req=>{
     catch{throw new HttpError(401,'請重新登入個人帳號')}
     const sessionAllowed=await db('rpc/forum_session_allowed',{method:'POST',body:JSON.stringify({actor_id:personal.id,session_key:sessionKey})});
     if(!sessionAllowed)throw new HttpError(401,'此登入已失效，請重新登入個人帳號');
+    if(action==='delete_post'){
+      // Ownership is part of the atomic DELETE, never trusted from client input.
+      // Existing FK cascade also removes replies belonging to this thread.
+      const removed=await db('forum_posts?id=eq.'+uuid(input.id)+'&author_id=eq.'+memberId+'&select=id',{
+        method:'DELETE',headers:{Prefer:'return=representation'}
+      });
+      if(!removed?.length)throw new HttpError(404,'文章不存在，或你不是文章作者');
+      return reply(200,{ok:true});
+    }
     if(['backup_start','backup_confirm'].includes(action)){
       if(!backupEnabled())throw new HttpError(503,'備援信箱功能尚未開放');
       try{return reply(200,await recoveryAction(action,input,{...personal,id:memberId},recoveryDeps()))}
@@ -153,7 +162,7 @@ Deno.serve(async req=>{
     if(action==='me'){
       const profiles=await db('forum_profiles?user_id=eq.'+memberId+'&select=display_name,created_at,updated_at');
       const backup=await db('forum_backup?user_id=eq.'+memberId+'&select=email,verified_at');
-      return reply(200,{email:canonical,profile:profiles[0]||null,suggested_name:personal.user_metadata?.display_name||'',backup:backup[0]||null,backup_enabled:backupEnabled()});
+      return reply(200,{member_id:memberId,email:canonical,profile:profiles[0]||null,suggested_name:personal.user_metadata?.display_name||'',backup:backup[0]||null,backup_enabled:backupEnabled()});
     }
     let payload:any;
     if(action==='profile')payload={display_name:displayName(input.name)};
