@@ -33,6 +33,15 @@ test('Markdown allows formatting and code, blocks executable HTML and unsafe URL
     const output=renderMarkdown(text);assert.doesNotMatch(output,/<script|<img|<iframe|href="(?:javascript|data):/i);
   }
 });
+test('Resource-list posts render each plain URL as a safe clickable link',()=>{
+  const urls=['https://emanlaicepsa.github.io/','https://usaco.guide/','https://codeforces.com/problemset','https://zerojudge.tw/','https://cses.fi/problemset/','https://atcoder.jp/','https://usaco.org/'];
+  const body='# 演算法教材\n\n'+urls.map(url=>'學習平台\n'+url).join('\n\n');
+  const html=renderMarkdown(body);
+  assert.equal((html.match(/<a /g)||[]).length,urls.length);
+  for(const url of urls)assert.ok(html.includes(`href="${url}" target="_blank" rel="noopener noreferrer nofollow ugc"`));
+  assert.doesNotMatch(renderMarkdown('```text\n'+urls.join('\n')+'\n```'),/<a /);
+});
+
 test('Database enforces identity uniqueness, verification, ownership and private access',async()=>{
   const db=new PGlite();
   try{

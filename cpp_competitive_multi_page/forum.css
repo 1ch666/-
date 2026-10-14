@@ -18,6 +18,6 @@
 .markdown-body pre{white-space:pre;overflow:auto;background:#eee;padding:14px;line-height:1.5}
 .markdown-body code{font-family:ui-monospace,Consolas,monospace;font-size:.9em;background:#eee}
 .markdown-body blockquote{border-left:3px solid #999;margin-left:0;padding-left:16px;color:#555}
-.markdown-body a{color:#222;text-underline-offset:3px}
+.markdown-body a{color:#174ea6;text-decoration:underline;text-underline-offset:3px}
 .markdown-body table{display:block;overflow:auto}.markdown-body th,.markdown-body td{display:table-cell!important}
 #forumRoot :focus-visible{outline:2px solid #222;outline-offset:3px}
