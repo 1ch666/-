@@ -9,12 +9,15 @@
   const shell=document.querySelector('.site-layout'), nav=document.querySelector('.topnav');
   const panel=document.createElement('main');
   panel.className='auth-panel';
-  panel.innerHTML='<h1>同校識別</h1><p>這是進站識別，不是個人論壇帳號。</p><form><label for="username">同校識別帳號</label><input id="username" name="username" autocomplete="username" required maxlength="64"><label for="password">同校識別密碼</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button type="submit">進入網站</button><p class="auth-status" role="status" aria-live="polite"></p></form>';
+  panel.innerHTML='<h1>同校識別</h1><p>這是進站識別，不是個人論壇帳號。</p><form><label for="username">同校識別帳號</label><input id="username" name="username" autocomplete="username" required maxlength="64"><label for="password">同校識別密碼</label><div class="auth-password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button class="auth-password-toggle" type="button" aria-controls="password" aria-label="顯示密碼" aria-pressed="false" title="顯示密碼"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path class="auth-eye-slash" d="m3 3 18 18"/></svg></button></div><button type="submit">進入網站</button><p class="auth-status" role="status" aria-live="polite"></p></form>';
   document.body.append(panel);
-  const form=panel.querySelector('form'), message=panel.querySelector('.auth-status'), submit=form.querySelector('button');
+  const form=panel.querySelector('form'), message=panel.querySelector('.auth-status'), submit=form.querySelector('button[type="submit"]');
+  const passwordToggle=panel.querySelector('.auth-password-toggle');
+  function showPassword(visible){form.password.type=visible?'text':'password';passwordToggle.setAttribute('aria-pressed',String(visible));passwordToggle.setAttribute('aria-label',visible?'隱藏密碼':'顯示密碼');passwordToggle.title=visible?'隱藏密碼':'顯示密碼';}
+  passwordToggle.addEventListener('click',()=>showPassword(form.password.type==='password'));
   const logout=document.createElement('button'); logout.type='button'; logout.textContent='離開網站'; logout.className='auth-logout'; nav.append(logout);
-  const clear=()=>{session=null;clearTimeout(timer);window.resetForumSession?.();try{sessionStorage.removeItem(storageKey)}catch{}};
-  function locked(text='') {shell.hidden=true;nav.hidden=true;panel.hidden=false;message.textContent=text;document.body.classList.remove('auth-loading');}
+  const clear=()=>{session=null;clearTimeout(timer);window.resetForumSession?.();window.resetCompilerSession?.();try{sessionStorage.removeItem(storageKey)}catch{}};
+  function locked(text='') {showPassword(false);shell.hidden=true;nav.hidden=true;panel.hidden=false;message.textContent=text;document.body.classList.remove('auth-loading');}
   async function request(url,options={}) {
     const response=await fetch(url,{...options,cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(45000)});
     return response;
@@ -37,14 +40,14 @@
     const data=await response.json();
     if(!keys.every(k=>Array.isArray(data[k]))) throw new Error('題庫格式錯誤');
     keys.forEach(k=>window[k]=data[k]);
-    const script=document.createElement('script');script.src='app.js?v=20261014-forum';
+    const script=document.createElement('script');script.src='app.js?v=20261014-compiler';
     await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error('頁面載入失敗'));document.head.append(script)});
     panel.hidden=true;shell.hidden=false;nav.hidden=false;document.body.classList.remove('auth-loading');
     if(location.hash)window.scrollPracticeSection?.(location.hash);
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();submit.disabled=true;message.textContent='驗證中…';
+    event.preventDefault();showPassword(false);submit.disabled=true;passwordToggle.disabled=true;message.textContent='驗證中…';
     try{
       const response=await request(base+'/functions/v1/site-login',{
         method:'POST',headers:{'Content-Type':'application/json',apikey:key,Authorization:'Bearer '+key},
@@ -55,7 +58,7 @@
       if(!response.ok){message.textContent=data.error||'登入失敗，請稍後重試。';return;}
       session={access_token:data.access_token,expires_at:data.expires_at};
       await load();
-    }catch{message.textContent='連線或載入失敗，請稍後重試。'}finally{submit.disabled=false;}
+    }catch{message.textContent='連線或載入失敗，請稍後重試。'}finally{form.password.value='';showPassword(false);passwordToggle.disabled=false;submit.disabled=false;}
   });
   logout.addEventListener('click',async()=>{
     const token=session?.access_token;clear();
@@ -67,7 +70,7 @@
   const siteRoot=new URL('./',location.href);
   // Accordion heights change; native restoration would override section positioning.
   history.scrollRestoration='manual';
-  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html','forum.html']);
+  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html','forum.html','compiler.html']);
   let navigationId=0, navigationRequest;
   let renderedPage=location.pathname+location.search;
   function isSitePage(url){return url.origin===siteRoot.origin&&url.pathname.startsWith(siteRoot.pathname)&&sitePages.has(url.pathname.slice(siteRoot.pathname.length))}
@@ -82,9 +85,10 @@
       if(!response.ok)throw new Error('頁面載入失敗');
       const parsed=new DOMParser().parseFromString(await response.text(),'text/html');
       const nextShell=parsed.querySelector('.site-layout');
-      if(!nextShell||!['roadmap','platform','forum'].includes(parsed.body.dataset.page))throw new Error('頁面格式錯誤');
+      if(!nextShell||!['roadmap','platform','forum','compiler'].includes(parsed.body.dataset.page))throw new Error('頁面格式錯誤');
       if(id!==navigationId||!session)return;
       window.leaveForumPage?.();
+      window.leaveCompilerPage?.();
       shell.replaceChildren(...Array.from(nextShell.childNodes).map(n=>document.importNode(n,true)));
       document.body.dataset.page=parsed.body.dataset.page;
       document.body.dataset.platform=parsed.body.dataset.platform||'';
