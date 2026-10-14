@@ -8,4 +8,16 @@
 .compiler-editors textarea{width:100%;min-width:0;box-sizing:border-box;resize:vertical;tab-size:4;font:14px/1.6 ui-monospace,Consolas,monospace;border:1px solid #aaa;border-radius:3px;padding:12px;background:#fff;color:#171717}
 .compiler-results h2{font-size:1rem;margin-top:24px}.compiler-results pre{font:14px/1.6 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;max-height:360px;min-height:48px;background:#fafafa;border:1px solid #ddd;padding:12px}
 #cppStatus{min-height:1.5em}#cppStatus.error{color:#9c2222}
+.cpp-color-editor{position:relative;min-width:0}
+.cpp-color-editor .cpp-highlight{position:absolute;inset:0;margin:0;border:1px solid transparent;padding:12px;box-sizing:border-box;overflow:hidden;white-space:pre;tab-size:4;font:14px/1.6 ui-monospace,Consolas,monospace;pointer-events:none;color:#171717;background:#fff}
+.cpp-color-editor textarea{position:relative;display:block;white-space:pre;overflow:auto}
+.cpp-color-editor.highlight-ready textarea{color:transparent;background:transparent;caret-color:#171717;-webkit-text-fill-color:transparent}
+.cpp-highlight .hljs-keyword,.cpp-highlight .hljs-type,.cpp-highlight .hljs-literal{color:#7843a8}
+.cpp-highlight .hljs-string,.cpp-highlight .hljs-char{color:#06734b}
+.cpp-highlight .hljs-comment{color:#68766d}
+.cpp-highlight .hljs-number{color:#a24c12}
+.cpp-highlight .hljs-meta{color:#245d9a}
+.cpp-highlight .hljs-title,.cpp-highlight .hljs-built_in{color:#135d92}
+@media(max-width:700px){.cpp-color-editor .cpp-highlight{font-size:16px}}
+@media(forced-colors:active){.cpp-color-editor .cpp-highlight{display:none}.cpp-color-editor.highlight-ready textarea{color:CanvasText;-webkit-text-fill-color:CanvasText;caret-color:CanvasText}}
 @media(max-width:700px){.compiler-editors{grid-template-columns:1fr}.compiler-editors textarea{font-size:16px}.compiler-toolbar{gap:8px}}

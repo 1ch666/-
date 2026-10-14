@@ -25,6 +25,23 @@
       <section class="compiler-results"><h2>標準輸出（stdout）</h2><pre id="cppOutput" tabindex="0">—</pre><h2>錯誤輸出（stderr）</h2><pre id="cppError" tabindex="0">—</pre><h2>編譯訊息</h2><pre id="cppDiagnostics" tabindex="0">—</pre></section>`;
     const current=root,code=root.querySelector('#cppCode'),standard=root.querySelector('#cppStandard'),form=root.querySelector('#cppForm'),run=root.querySelector('#cppRun'),stop=root.querySelector('#cppStop'),status=root.querySelector('#cppStatus');
     code.value=draft.code;standard.value=draft.standard;
+    // The textarea remains the accessible editing surface; highlighting is inert.
+    if(window.highlightCpp){
+      const shell=document.createElement('div'),paint=document.createElement('pre');
+      shell.className='cpp-color-editor';paint.className='cpp-highlight';paint.setAttribute('aria-hidden','true');
+      code.parentNode.insertBefore(shell,code);shell.append(paint,code);code.wrap='off';
+      const sync=()=>{paint.scrollTop=code.scrollTop;paint.scrollLeft=code.scrollLeft};
+      const color=()=>{try{paint.innerHTML=window.highlightCpp(code.value.slice(0,65536))+'\n';shell.classList.add('highlight-ready');sync()}catch{shell.classList.remove('highlight-ready')}};
+      code.addEventListener('input',color);code.addEventListener('scroll',sync);color();
+    }
+    const copy=document.createElement('button'),online=document.createElement('a');
+    copy.type='button';copy.textContent='複製程式碼';online.textContent='開啟 OnlineGDB';
+    online.href='https://www.onlinegdb.com/online_c++_compiler';online.target='_blank';online.rel='noopener noreferrer';
+    root.querySelector('.compiler-toolbar').append(copy,online);
+    copy.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(code.value);status.textContent='已複製。開啟 OnlineGDB 後貼上程式碼，再執行。'}
+      catch{status.textContent='無法存取剪貼簿，請在程式碼區手動全選並複製。'}
+    });
     const output=(id,value)=>{current.querySelector(id).textContent=typeof value==='string'&&value.length?value.slice(0,200000):'—'};
     current.querySelector('#cppDownload').addEventListener('click',()=>{
       const url=URL.createObjectURL(new Blob([code.value],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='main.cpp';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
