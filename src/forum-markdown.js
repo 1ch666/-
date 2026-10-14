@@ -1,7 +1,9 @@
 import MarkdownIt from 'markdown-it';
 
 // No raw HTML, images, embedded media, plugins, or inline styles from users.
-const parser = new MarkdownIt({html:false,linkify:false,typographer:false,breaks:true});
+const parser = new MarkdownIt({html:false,linkify:true,typographer:false,breaks:true});
+// Only explicit HTTP(S) URLs; do not turn emails or ambiguous bare domains into links.
+parser.linkify.set({fuzzyLink:false,fuzzyEmail:false,fuzzyIP:false});
 parser.disable('image');
 parser.validateLink = value => /^https?:\/\//i.test(value);
 const originalLink = parser.renderer.rules.link_open;

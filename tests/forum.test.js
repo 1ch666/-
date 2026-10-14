@@ -23,6 +23,10 @@ test('Gmail aliases normalize to one mailbox; other domains are rejected',()=>{
   assert.throws(()=>password('tcsshac'));assert.throws(()=>displayName('a\u202eb'));
 });
 test('Markdown allows formatting and code, blocks executable HTML and unsafe URLs',()=>{
+  assert.match(renderMarkdown('講義 https://usaco.guide/general'),/href="https:\/\/usaco.guide\/general"/);
+  assert.match(renderMarkdown('http://example.com/test'),/target="_blank"/);
+  assert.doesNotMatch(renderMarkdown('`https://example.com`'),/<a /);
+  assert.doesNotMatch(renderMarkdown('name@example.com javascript:alert(1)'),/<a /);
   const html=renderMarkdown('# 標題\n\n**粗體**\n\n```cpp\ncout << "x";\n```\n\n[講義](https://usaco.guide/general)');
   assert.match(html,/<h1>標題<\/h1>/);assert.match(html,/<strong>粗體/);assert.match(html,/language-cpp/);assert.match(html,/noopener noreferrer nofollow ugc/);
   for(const text of ['<script>alert(1)</script>','<img src=x onerror=alert(1)>','[x](javascript:alert(1))','[x](data:text/html;base64,xxx)','![track](https://example.com/pixel.png)','<iframe src="https://example.com"></iframe>']){
