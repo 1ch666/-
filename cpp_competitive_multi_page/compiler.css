@@ -1,4 +1,8 @@
 [data-page=compiler] .site-layout{display:block;max-width:1200px}
+#cppInputDialog{width:min(560px,90vw);box-sizing:border-box;border:1px solid #aaa;border-radius:4px;padding:24px;color:#222;background:#fff}
+#cppInputDialog::backdrop{background:#0006}
+#cppStdin{display:block;width:100%;box-sizing:border-box;font:16px/1.5 ui-monospace,Consolas,monospace;margin-top:8px;resize:vertical}
+#cppInputError{color:#9c2222}
 #compilerRoot .compiler-note{font-size:.85rem;color:#555;line-height:1.7}
 .compiler-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:20px 0}
 #compilerRoot button,#compilerRoot select{font:inherit;border:1px solid #aaa;background:#fff;color:#222;border-radius:3px;padding:8px 12px}

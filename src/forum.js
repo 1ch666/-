@@ -8,7 +8,7 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
   const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
   const emailField=()=>field('會員信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
   const passwordField=(fresh=false)=>field('論壇密碼（不是 Google 密碼）','password','password',`autocomplete="${fresh?'new-password':'current-password'}" ${fresh?'minlength="12"':''} maxlength="128"`);
-  const message=(text,error=false)=>{const node=root?.querySelector('#forumStatus');if(node){node.textContent=text;node.classList.toggle('error',error)}};
+  const message=(text,error=false)=>{const node=root?.querySelector('#forumStatus');if(node){const waiting=!error&&/(?:…|\.{3})$/.test(text);node.textContent=waiting?text.replace(/(?:…|\.{3})$/,''):text;node.classList.toggle('waiting-dots',waiting);node.classList.toggle('error',error)}};
   const request=(action,data={})=>{
     if(member&&member.expires_at*1000<=Date.now()){member=null;me=null;throw new Error('論壇登入已到期，請重新登入')}
     return window.practiceForumRequest(action,data,member?.access_token);

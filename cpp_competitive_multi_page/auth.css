@@ -14,3 +14,7 @@
 .auth-panel .auth-password-toggle{position:absolute;right:2px;top:2px;bottom:2px;width:42px;padding:6px;border:0;display:grid;place-items:center;background:transparent}
 .auth-password-toggle:focus-visible{outline:2px solid #222;outline-offset:1px}
 .auth-eye-slash{display:none}.auth-password-toggle[aria-pressed=true] .auth-eye-slash{display:block}
+/* Six-dot waiting indicator without JS timers or repeated live announcements. */
+.waiting-dots::after{content:'......';display:inline-block;overflow:hidden;vertical-align:bottom;white-space:nowrap;width:1ch;font-family:monospace;animation:waiting-dots 2.4s step-end infinite}
+@keyframes waiting-dots{0%{width:1ch}16.67%{width:2ch}33.33%{width:3ch}50%{width:4ch}66.67%{width:5ch}83.33%,100%{width:6ch}}
+@media(prefers-reduced-motion:reduce){.waiting-dots::after{animation:none;width:3ch}}

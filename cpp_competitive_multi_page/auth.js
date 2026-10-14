@@ -32,7 +32,7 @@
   };
   async function load() {
     if(!session?.access_token || !Number.isFinite(session.expires_at) || session.expires_at*1000<=Date.now()+5000) {clear();locked('請登入');return;}
-    message.textContent='讀取題庫…';
+    message.textContent='讀取題庫';message.classList.add('waiting-dots');
     const response=await request(base+'/storage/v1/object/authenticated/practice-private/curriculum.json',{
       headers:{apikey:key,Authorization:'Bearer '+session.access_token}
     });
@@ -47,7 +47,7 @@
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
   }
   form.addEventListener('submit',async event=>{
-    event.preventDefault();showPassword(false);submit.disabled=true;passwordToggle.disabled=true;message.textContent='驗證中…';
+    event.preventDefault();showPassword(false);submit.disabled=true;passwordToggle.disabled=true;message.textContent='登入中';message.classList.add('waiting-dots');
     try{
       const response=await request(base+'/functions/v1/site-login',{
         method:'POST',headers:{'Content-Type':'application/json',apikey:key,Authorization:'Bearer '+key},
@@ -58,7 +58,7 @@
       if(!response.ok){message.textContent=data.error||'登入失敗，請稍後重試。';return;}
       session={access_token:data.access_token,expires_at:data.expires_at};
       await load();
-    }catch{message.textContent='連線或載入失敗，請稍後重試。'}finally{form.password.value='';showPassword(false);passwordToggle.disabled=false;submit.disabled=false;}
+    }catch{message.textContent='連線或載入失敗，請稍後重試。'}finally{message.classList.remove('waiting-dots');form.password.value='';showPassword(false);passwordToggle.disabled=false;submit.disabled=false;}
   });
   logout.addEventListener('click',async()=>{
     const token=session?.access_token;clear();
