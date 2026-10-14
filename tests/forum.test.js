@@ -51,6 +51,7 @@ test('Database enforces identity uniqueness, verification, ownership and private
       insert into auth.users(id,email,email_confirmed_at) values('${SCHOOL_USER}','school-owner@gmail.com',now());`);
     await db.exec(await readFile('supabase/migrations/202610140001_forum.sql','utf8'));
     await db.exec(await readFile('supabase/migrations/202610140003_school_email.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610140004_avatar.sql','utf8'));
     const student='44444444-4444-4444-8444-444444444444';
     await db.query('insert into auth.users(id,email) values($1,$2)',[student,'s141244@stu.tcssh.tc.edu.tw']);
     assert.equal((await db.query('select count(*)::int n from public.forum_auth_links where auth_user_id=$1',[student])).rows[0].n,0);
@@ -69,6 +70,8 @@ test('Database enforces identity uniqueness, verification, ownership and private
     await db.query("select public.forum_write($1,'profile',$2)",[a,{display_name:'同學甲'}]);
     await db.query("select public.forum_write($1,'profile',$2)",[a,{display_name:'修改名稱'}]);
     assert.equal((await db.query('select display_name from public.forum_profiles')).rows[0].display_name,'修改名稱');
+    await assert.rejects(db.query('update public.forum_profiles set avatar_data=$1 where user_id=$2',['https://example.com/a.svg',a]),/forum_avatar_size/);
+    assert.equal((await db.query('select avatar_data from public.forum_profiles where user_id=$1',[a])).rows[0].avatar_data,null);
     await assert.rejects(db.query("select public.forum_write($1,'profile',$2)",[SCHOOL_USER,{display_name:'共用帳號'}]),/Personal/);
     const post=(await db.query("select public.forum_write($1,'post',$2) as value",[a,{title:'測試文章',body:'# Markdown'}])).rows[0].value;
     assert(post.id);

@@ -70,7 +70,7 @@
   const siteRoot=new URL('./',location.href);
   // Accordion heights change; native restoration would override section positioning.
   history.scrollRestoration='manual';
-  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html','forum.html','compiler.html']);
+  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html','forum.html','profile.html','compiler.html']);
   let navigationId=0, navigationRequest;
   let renderedPage=location.pathname+location.search;
   function isSitePage(url){return url.origin===siteRoot.origin&&url.pathname.startsWith(siteRoot.pathname)&&sitePages.has(url.pathname.slice(siteRoot.pathname.length))}

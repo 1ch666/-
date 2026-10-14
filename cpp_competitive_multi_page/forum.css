@@ -1,4 +1,8 @@
 [data-page=forum] .site-layout{display:block;max-width:1000px}
+.forum-avatar{display:inline-block;width:40px;height:40px;object-fit:cover;border-radius:50%;vertical-align:middle;margin-right:10px;flex-shrink:0}
+.forum-avatar-default{background:#e4e6eb;overflow:hidden}.forum-avatar-default svg{width:100%;height:100%;fill:#a4a7ad}
+.profile-avatar{border-bottom:1px solid var(--line);padding-bottom:20px}.profile-avatar .forum-avatar{width:96px;height:96px}
+.profile-avatar p{font-size:.85rem;color:#555}
 .forum-nav,.forum-pager{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0}
 #forumRoot button{font:inherit;padding:8px 12px;border:1px solid #aaa;background:white;color:#222;cursor:pointer;border-radius:3px}
 #forumRoot button:disabled{opacity:.5;cursor:default}
