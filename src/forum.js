@@ -28,11 +28,16 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
   function profileForm(){return `<form data-form="profile">${field('公開名稱','name','text',`minlength="2" maxlength="30" autocomplete="nickname" value="${esc(me?.profile?.display_name||me?.suggested_name||'')}"`)}<p class="forum-help">2–30 字。名稱會顯示在文章與留言旁，不會公開 Gmail；名稱不是唯一識別碼。</p><button>儲存名稱</button></form>`}
   async function render(){
     if(!root?.isConnected)return;
+    if(member&&me&&!me.profile&&!['reset','login'].includes(screen))screen='onboarding';
     const ticket=++generation;
-    root.innerHTML=`<header class="hero compact"><h1>討論論壇</h1><p>同校識別與個人論壇帳號分開。閱讀不需論壇會員；發言需驗證 Gmail 並登入。</p></header><nav class="forum-nav" aria-label="論壇功能"><button data-screen="list">全部文章</button><button data-screen="compose">發表文章</button>${member?'<button data-screen="profile">個人資料</button><button data-action="logout">論壇登出</button>':'<button data-screen="login">論壇登入</button><button data-screen="register">註冊</button>'}</nav><p id="forumStatus" class="forum-status" role="status" aria-live="polite"></p><section id="forumContent"></section>`;
+    root.innerHTML=`<header class="hero compact"><h1>討論論壇</h1><p>發言須登入個人會員。Google 登入不另寄驗證信；Gmail／密碼註冊須驗證信箱。</p></header><nav class="forum-nav" aria-label="論壇功能"><button data-screen="list">全部文章</button><button data-screen="compose">發表文章</button>${member?'<button data-screen="profile">個人資料</button><button data-action="logout">論壇登出</button>':'<button data-screen="login">論壇登入</button><button data-screen="register">註冊</button>'}</nav><p id="forumStatus" class="forum-status" role="status" aria-live="polite"></p><section id="forumContent"></section>`;
     const content=root.querySelector('#forumContent');
     try{
-      if(screen==='list'){
+      if(screen==='onboarding'){
+        root.querySelector('.forum-nav').hidden=true;
+        root.querySelector('.hero').innerHTML='<h1>設定公開名稱</h1>';
+        content.innerHTML=`<form data-form="profile">${field('名稱','name','text','minlength="2" maxlength="30" autocomplete="nickname"')}<button>完成註冊</button></form>`;
+      }else if(screen==='list'){
         message('讀取文章…');const data=await request('list',{page:listPage});if(ticket!==generation)return;
         content.innerHTML=`<h2>全部文章</h2>${data.posts.length?'<ol class="forum-list">'+data.posts.map(p=>`<li><button class="forum-title" data-thread="${esc(p.id)}">${esc(p.title)}</button><p>${esc(p.author?.display_name||'會員')} · ${esc(date(p.created_at))}</p></li>`).join('')+'</ol>':'<p>尚無文章。</p>'}${pager(listPage,data.more,'list')}`;message('');
       }else if(screen==='thread'){
@@ -99,7 +104,9 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
         else if(!me.profile){screen='profile'}else screen='list';
         await render();if(!me.profile&&screen==='profile')message('請確認並儲存公開名稱，完成會員設定後即可發言。');
       }else if(action==='profile'){
-        await request('profile',data);if(ticket!==generation)return;await render();message('名稱已更新，既有文章與留言會顯示新名稱。');
+        const profile=await request('profile',data);if(ticket!==generation)return;
+        me={...me,profile};const first=screen==='onboarding';if(first)screen='list';await render();
+        if(!first)message('名稱已更新，既有文章與留言會顯示新名稱。');
       }else if(action==='password'){
         await request('password',data);if(ticket!==generation)return;form.reset();screen='profile';await render();message('論壇密碼已更新。');
       }else{

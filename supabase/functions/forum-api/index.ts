@@ -44,7 +44,8 @@ async function readBody(req:Request){
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 function sessionResult(data:any){
-  if(!data.access_token||!data.user?.email_confirmed_at||data.user.id===SCHOOL_USER)throw new HttpError(403,'請先驗證 Gmail，再使用個人帳號登入');
+  if(data.user?.id===SCHOOL_USER)throw new HttpError(403,'此信箱屬於同校共用帳號，不能作為個人會員；這不是信箱未驗證。若個人 Google 被誤綁，請聯絡管理員拆分。');
+  if(!data.access_token||!data.user?.email_confirmed_at)throw new HttpError(403,'請先驗證 Gmail，再使用個人帳號登入');
   gmail(data.user.email);
   return {access_token:data.access_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+data.expires_in};
 }
