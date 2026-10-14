@@ -1,0 +1,138 @@
+import {renderMarkdown} from './forum-markdown.js';
+import {googleLogin,cancelGoogle} from './forum-google.js';
+
+(()=>{
+  let member=null,expiryTimer,me=null,root,screen='list',listPage=0,threadId='',commentPage=0,verifyType='signup',pendingEmail='',generation=0,backupTicket='';
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const date=s=>new Date(s).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'});
+  const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
+  const emailField=()=>field('Gmail 信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
+  const passwordField=(fresh=false)=>field('論壇密碼（不是 Google 密碼）','password','password',`autocomplete="${fresh?'new-password':'current-password'}" ${fresh?'minlength="12"':''} maxlength="128"`);
+  const message=(text,error=false)=>{const node=root?.querySelector('#forumStatus');if(node){node.textContent=text;node.classList.toggle('error',error)}};
+  const request=(action,data={})=>{
+    if(member&&member.expires_at*1000<=Date.now()){member=null;me=null;throw new Error('論壇登入已到期，請重新登入')}
+    return window.practiceForumRequest(action,data,member?.access_token);
+  };
+  function accountSession(data){
+    member=data;clearTimeout(expiryTimer);
+    expiryTimer=setTimeout(()=>{member=null;me=null;if(document.body.dataset.page==='forum'){screen='login';render()}},Math.max(0,data.expires_at*1000-Date.now()));
+  }
+  window.resetForumSession=()=>{cancelGoogle();member=null;me=null;clearTimeout(expiryTimer);generation++;pendingEmail='';backupTicket='';};
+  window.leaveForumPage=()=>{generation++;root=null;};
+  function editor(max=20000){return `<label>內容（Markdown）<textarea name="body" rows="12" maxlength="${max}" required aria-describedby="markdownHelp"></textarea></label><p id="markdownHelp" class="forum-help">支援標題、粗體、清單、引用、表格、連結與程式碼區塊。不支援 HTML、圖片或附件。</p><button type="button" data-preview>預覽 Markdown</button><section class="markdown-body forum-preview" aria-label="Markdown 預覽" hidden></section>`}
+  function pager(current,more,kind){return `<div class="forum-pager"><button data-page="${kind}" data-delta="-1" ${current===0?'disabled':''}>上一頁</button><span>第 ${current+1} 頁</span><button data-page="${kind}" data-delta="1" ${more?'':'disabled'}>下一頁</button></div>`}
+  function needAccount(){return '<p>發文與留言須登入個人帳號；同校識別不等於論壇登入。</p><button data-screen="login">論壇登入</button> <button data-screen="register">註冊</button>'}
+  function needProfile(){return '<p>發言前請先設定公開名稱。</p><button data-screen="profile">設定名稱</button>'}
+  const backupField=()=>field('備援信箱','backup_email','email','autocomplete="email" maxlength="254"');
+  const codeField=(label,name)=>field(label,name,'text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" minlength="8" maxlength="8"');
+  function profileForm(){return `<form data-form="profile">${field('公開名稱','name','text',`minlength="2" maxlength="30" autocomplete="nickname" value="${esc(me?.profile?.display_name||me?.suggested_name||'')}"`)}<p class="forum-help">2–30 字。名稱會顯示在文章與留言旁，不會公開 Gmail；名稱不是唯一識別碼。</p><button>儲存名稱</button></form>`}
+  async function render(){
+    if(!root?.isConnected)return;
+    const ticket=++generation;
+    root.innerHTML=`<header class="hero compact"><h1>討論論壇</h1><p>同校識別與個人論壇帳號分開。閱讀不需論壇會員；發言需驗證 Gmail 並登入。</p></header><nav class="forum-nav" aria-label="論壇功能"><button data-screen="list">全部文章</button><button data-screen="compose">發表文章</button>${member?'<button data-screen="profile">個人資料</button><button data-action="logout">論壇登出</button>':'<button data-screen="login">論壇登入</button><button data-screen="register">註冊</button>'}</nav><p id="forumStatus" class="forum-status" role="status" aria-live="polite"></p><section id="forumContent"></section>`;
+    const content=root.querySelector('#forumContent');
+    try{
+      if(screen==='list'){
+        message('讀取文章…');const data=await request('list',{page:listPage});if(ticket!==generation)return;
+        content.innerHTML=`<h2>全部文章</h2>${data.posts.length?'<ol class="forum-list">'+data.posts.map(p=>`<li><button class="forum-title" data-thread="${esc(p.id)}">${esc(p.title)}</button><p>${esc(p.author?.display_name||'會員')} · ${esc(date(p.created_at))}</p></li>`).join('')+'</ol>':'<p>尚無文章。</p>'}${pager(listPage,data.more,'list')}`;message('');
+      }else if(screen==='thread'){
+        message('讀取文章…');const data=await request('thread',{id:threadId,page:commentPage});if(ticket!==generation)return;
+        content.innerHTML=`<article class="forum-post"><h2>${esc(data.post.title)}</h2><p class="forum-meta">${esc(data.post.author?.display_name||'會員')} · ${esc(date(data.post.created_at))}</p><div class="markdown-body">${renderMarkdown(data.post.body)}</div></article><h2>留言</h2><ol class="forum-comments">${data.comments.map(c=>`<li><p class="forum-meta">${esc(c.author?.display_name||'會員')} · ${esc(date(c.created_at))}</p><div class="markdown-body">${renderMarkdown(c.body)}</div></li>`).join('')}</ol>${data.comments.length?'':'<p>尚無留言。</p>'}${pager(commentPage,data.more,'comments')}<h2>新增留言</h2>${member?`<form data-form="comment">${editor(10000)}<button>送出留言</button></form>`:needAccount()}`;message('');
+      }else if(screen==='compose'){
+        content.innerHTML='<h2>發表文章</h2>'+(member?`<form data-form="post">${field('標題','title','text','minlength="2" maxlength="120"')}${editor()}<button>發布文章</button></form>`:needAccount());
+      }else if(screen==='profile'){
+        if(!member){screen='login';return render()}
+        message('讀取個人資料…');const currentMe=await request('me');if(ticket!==generation)return;me=currentMe;
+        content.innerHTML=`<h2>個人資料</h2><p>Gmail：${esc(me.email)}（僅本人可見）</p>${profileForm()}<h2>修改論壇密碼</h2><form data-form="password">${passwordField(true)}<button>修改密碼</button></form>`;message('');
+      }else if(screen==='register'){
+        const status=await request('status');if(ticket!==generation)return;
+        content.innerHTML=`<h2>註冊論壇帳號</h2><p>同一個 Gmail 只能有一個會員；句點與 +標籤視為同一個信箱。</p><form data-form="register">${emailField()}${field('公開名稱','name','text','minlength="2" maxlength="30" autocomplete="nickname"')}${passwordField(true)}<p class="forum-help">密碼至少 12 字元。請使用與 Google 帳號不同的密碼。</p><button ${status.signup_enabled?'':'disabled'}>寄送驗證碼</button></form><button data-screen="verify">我已有驗證碼</button>`;
+        if(!status.signup_enabled)message('註冊尚未開放，正在設定驗證信服務。');
+      }else if(screen==='login'){
+        content.innerHTML=`<h2>論壇登入</h2><form data-form="login">${emailField()}${passwordField()}<button>登入論壇</button></form><button data-screen="recover">忘記密碼</button> <button data-screen="verify">驗證信箱／重寄驗證碼</button>`;
+      }else if(screen==='recover'){
+        content.innerHTML=`<h2>重設論壇密碼</h2><form data-form="recover">${emailField()}<button>寄送重設驗證碼</button></form><button data-screen="backup_recover">無法使用原信箱：以備援信箱取回</button>`;
+      }else if(screen==='backup_recover'){
+        const status=await request('status');if(ticket!==generation)return;
+        content.innerHTML=`<h2>以備援信箱取回帳號</h2><p>必須使用先前已驗證綁定的備援信箱。取回後仍以原 Gmail 登入。</p><form data-form="backup_recover">${emailField()}${backupField()}<button ${status.backup_enabled?'':'disabled'}>寄送備援驗證碼</button></form>`;
+        if(!status.backup_enabled)message('備援信箱功能尚未開放。');
+      }else if(screen==='backup_confirm'){
+        content.innerHTML=`<h2>驗證備援信箱</h2><p>兩組驗證碼有效期限 10 分鐘；合計最多嘗試 5 次。</p><form data-form="backup_confirm">${codeField('原 Gmail 收到的驗證碼','primary_code')}${codeField('備援信箱收到的驗證碼','code')}<button>確認綁定</button></form>`;
+      }else if(screen==='backup_reset'){
+        content.innerHTML=`<h2>以備援信箱重設密碼</h2><form data-form="backup_reset">${codeField('備援信箱收到的驗證碼','code')}${passwordField(true)}<button>重設密碼並使舊登入失效</button></form>`;
+      }else if(screen==='verify'){
+        content.innerHTML=`<h2>${verifyType==='recovery'?'重設密碼驗證':'驗證 Gmail'}</h2><form data-form="verify">${emailField()}${field('信件中的驗證碼','code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" minlength="6" maxlength="10"')}<button>驗證</button></form><button data-action="resend">重新寄送驗證碼</button>`;
+        content.querySelector('[name=email]').value=pendingEmail;
+      }else if(screen==='reset'){
+        content.innerHTML=`<h2>設定新的論壇密碼</h2><form data-form="password">${passwordField(true)}<button>儲存新密碼</button></form>`;
+      }
+      if(['login','register'].includes(screen))content.insertAdjacentHTML('afterbegin','<button data-action="google">使用 Google 登入</button><p>同一個已驗證 Gmail 共用會員。Google 首次登入後須設定公開名稱；可在個人資料設定論壇密碼。</p>');
+      if(screen==='profile'&&me){
+        content.insertAdjacentHTML('beforeend',`<h2>備援信箱</h2><p>${me.backup?'已驗證：'+esc(me.backup.email):'尚未綁定'}</p><p>可用來重設論壇密碼。新增或更換時，須同時驗證原 Gmail 與備援信箱。</p><form data-form="backup_start">${backupField()}<button ${me.backup_enabled?'':'disabled'}>寄送兩組驗證碼</button></form>`);
+        if(!me.backup_enabled)message('備援信箱功能尚未開放。');
+      }
+      if(member&&!me?.profile){
+        for(const form of content.querySelectorAll('form[data-form="post"],form[data-form="comment"]'))form.outerHTML=needProfile();
+      }
+    }catch(error){if(ticket===generation)message(error.message,true)}
+  }
+  async function submit(event){
+    const form=event.target.closest('form[data-form]');if(!form)return;event.preventDefault();
+    const data=Object.fromEntries(new FormData(form)),action=form.dataset.form;
+    const buttons=form.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);message('處理中…');
+    const ticket=generation;
+    try{
+      if(['backup_start','backup_recover'].includes(action)){
+        const result=await request(action,data);if(ticket!==generation)return;
+        backupTicket=result.ticket;screen=action==='backup_start'?'backup_confirm':'backup_reset';await render();message(result.message);
+      }else if(['backup_confirm','backup_reset'].includes(action)){
+        const result=await request(action,{...data,ticket:backupTicket});if(ticket!==generation)return;
+        backupTicket='';if(action==='backup_reset'){window.resetForumSession();screen='login'}else screen='profile';
+        await render();message(result.message);
+      }else if(['register','recover'].includes(action)){
+        const result=await request(action,data);if(ticket!==generation)return;
+        pendingEmail=data.email;verifyType=action==='recover'?'recovery':'signup';screen='verify';await render();message(result.message);
+      }else if(action==='login'||action==='verify'){
+        const result=await request(action,{...data,type:verifyType});if(ticket!==generation)return;accountSession(result);
+        const currentMe=await request('me');if(ticket!==generation)return;me=currentMe;
+        if(action==='verify'&&verifyType==='recovery')screen='reset';
+        else if(!me.profile){screen='profile'}else screen='list';
+        await render();if(!me.profile&&screen==='profile')message('請確認並儲存公開名稱，完成會員設定後即可發言。');
+      }else if(action==='profile'){
+        await request('profile',data);if(ticket!==generation)return;await render();message('名稱已更新，既有文章與留言會顯示新名稱。');
+      }else if(action==='password'){
+        await request('password',data);if(ticket!==generation)return;form.reset();screen='profile';await render();message('論壇密碼已更新。');
+      }else{
+        if(!me?.profile){screen='profile';await render();message('請先儲存公開名稱。');return;}
+        const result=await request(action,{...data,id:threadId});if(ticket!==generation)return;
+        if(action==='post'){threadId=result.id;commentPage=0;}screen='thread';await render();message('已發布。');
+      }
+    }catch(error){if(ticket===generation)message(error.message,true)}
+    finally{form.querySelector('[name=password]')?.setAttribute('value','');const p=form.querySelector('[name=password]');if(p)p.value='';buttons.forEach(b=>b.disabled=false)}
+  }
+  async function click(event){
+    const button=event.target.closest('button');if(!button)return;
+    if(button.dataset.action==='google'){
+      const ticket=generation;button.disabled=true;message('請在 Google 視窗完成登入…');
+      try{const data=await googleLogin(request);if(ticket!==generation)return;accountSession(data);
+        const currentMe=await request('me');if(ticket!==generation)return;me=currentMe;screen=me.profile?'list':'profile';await render();
+      }catch(error){if(ticket===generation)message(error.message,true)}finally{button.disabled=false}return;
+    }
+    if(button.dataset.screen){screen=button.dataset.screen;if(screen==='verify')verifyType='signup';return render()}
+    if(button.dataset.thread){threadId=button.dataset.thread;commentPage=0;screen='thread';return render()}
+    if(button.dataset.page){if(button.dataset.page==='list')listPage+=Number(button.dataset.delta);else commentPage+=Number(button.dataset.delta);return render()}
+    if(button.hasAttribute('data-preview')){const form=button.closest('form'),preview=form.querySelector('.forum-preview');preview.innerHTML=renderMarkdown(form.elements.body.value);preview.hidden=!preview.hidden;button.textContent=preview.hidden?'預覽 Markdown':'收合預覽';return}
+    if(button.dataset.action==='logout'){
+      button.disabled=true;try{await request('logout')}catch{}window.resetForumSession();screen='list';await render();return;
+    }
+    if(button.dataset.action==='resend'){
+      button.disabled=true;
+      try{const email=root.querySelector('[name=email]').value;const result=await request(verifyType==='recovery'?'recover':'resend',{email});message(result.message)}catch(error){message(error.message,true)}finally{button.disabled=false}
+    }
+  }
+  window.renderForumPage=()=>{
+    root=document.querySelector('#forumRoot');if(!root)return;
+    // New shell each time; listeners are attached only to that shell.
+    root.addEventListener('submit',submit);root.addEventListener('click',click);screen='list';render();
+  };
+})();

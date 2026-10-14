@@ -1,5 +1,6 @@
 (()=>{
   window.renderPracticePage=()=>{
+  if(document.body.dataset.page==='forum'){window.renderForumPage();return;}
   const P=window.PROBLEMS||[],groups=window.COMBINED_GROUPS||[],roadmap=window.ROADMAP_STAGES||[],cfGroups=window.CODEFORCES_GROUPS||[],csesGroups=window.CSES_GROUPS||[],atcoderGroups=window.ATCODER_GROUPS||[],platforms=window.PLATFORMS||[],page=document.body.dataset.page;
   const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const idOf=x=>(x.url.match(/[?&]problemid=([^&]+)/)||[])[1];

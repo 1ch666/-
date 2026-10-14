@@ -9,16 +9,24 @@
   const shell=document.querySelector('.site-layout'), nav=document.querySelector('.topnav');
   const panel=document.createElement('main');
   panel.className='auth-panel';
-  panel.innerHTML='<h1>題庫登入</h1><form><label for="username">帳號</label><input id="username" name="username" autocomplete="username" required maxlength="64"><label for="password">密碼</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button type="submit">登入</button><p class="auth-status" role="status" aria-live="polite"></p></form>';
+  panel.innerHTML='<h1>同校識別</h1><p>這是進站識別，不是個人論壇帳號。</p><form><label for="username">同校識別帳號</label><input id="username" name="username" autocomplete="username" required maxlength="64"><label for="password">同校識別密碼</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button type="submit">進入網站</button><p class="auth-status" role="status" aria-live="polite"></p></form>';
   document.body.append(panel);
   const form=panel.querySelector('form'), message=panel.querySelector('.auth-status'), submit=form.querySelector('button');
-  const logout=document.createElement('button'); logout.type='button'; logout.textContent='登出'; logout.className='auth-logout'; nav.append(logout);
-  const clear=()=>{session=null;clearTimeout(timer);try{sessionStorage.removeItem(storageKey)}catch{}};
+  const logout=document.createElement('button'); logout.type='button'; logout.textContent='離開網站'; logout.className='auth-logout'; nav.append(logout);
+  const clear=()=>{session=null;clearTimeout(timer);window.resetForumSession?.();try{sessionStorage.removeItem(storageKey)}catch{}};
   function locked(text='') {shell.hidden=true;nav.hidden=true;panel.hidden=false;message.textContent=text;document.body.classList.remove('auth-loading');}
   async function request(url,options={}) {
     const response=await fetch(url,{...options,cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(45000)});
     return response;
   }
+  window.practiceForumRequest=async(action,data={},forumToken)=>{
+    if(!session?.access_token||session.expires_at*1000<=Date.now())throw new Error('同校識別已到期，請重新整理並登入');
+    const response=await request(base+'/functions/v1/forum-api',{
+      method:'POST',headers:{'Content-Type':'application/json',apikey:key,Authorization:'Bearer '+session.access_token,...(forumToken?{'x-forum-token':forumToken}:{})},
+      body:JSON.stringify({...data,action})
+    });
+    const result=await response.json();if(!response.ok)throw new Error(result.error||'論壇服務尚未就緒');return result;
+  };
   async function load() {
     if(!session?.access_token || !Number.isFinite(session.expires_at) || session.expires_at*1000<=Date.now()+5000) {clear();locked('請登入');return;}
     message.textContent='讀取題庫…';
@@ -29,10 +37,10 @@
     const data=await response.json();
     if(!keys.every(k=>Array.isArray(data[k]))) throw new Error('題庫格式錯誤');
     keys.forEach(k=>window[k]=data[k]);
-    const script=document.createElement('script');script.src='app.js?v=20261010-toc';
+    const script=document.createElement('script');script.src='app.js?v=20261014-forum';
     await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error('頁面載入失敗'));document.head.append(script)});
     panel.hidden=true;shell.hidden=false;nav.hidden=false;document.body.classList.remove('auth-loading');
-    if(location.hash)window.scrollPracticeSection(location.hash);
+    if(location.hash)window.scrollPracticeSection?.(location.hash);
     timer=setTimeout(()=>{clear();location.reload()},Math.max(0,session.expires_at*1000-Date.now()));
   }
   form.addEventListener('submit',async event=>{
@@ -59,7 +67,7 @@
   const siteRoot=new URL('./',location.href);
   // Accordion heights change; native restoration would override section positioning.
   history.scrollRestoration='manual';
-  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html']);
+  const sitePages=new Set(['index.html','cses.html','zerojudge.html','codeforces.html','atcoder.html','tioj.html','forum.html']);
   let navigationId=0, navigationRequest;
   let renderedPage=location.pathname+location.search;
   function isSitePage(url){return url.origin===siteRoot.origin&&url.pathname.startsWith(siteRoot.pathname)&&sitePages.has(url.pathname.slice(siteRoot.pathname.length))}
@@ -74,8 +82,9 @@
       if(!response.ok)throw new Error('頁面載入失敗');
       const parsed=new DOMParser().parseFromString(await response.text(),'text/html');
       const nextShell=parsed.querySelector('.site-layout');
-      if(!nextShell||!['roadmap','platform'].includes(parsed.body.dataset.page))throw new Error('頁面格式錯誤');
+      if(!nextShell||!['roadmap','platform','forum'].includes(parsed.body.dataset.page))throw new Error('頁面格式錯誤');
       if(id!==navigationId||!session)return;
+      window.leaveForumPage?.();
       shell.replaceChildren(...Array.from(nextShell.childNodes).map(n=>document.importNode(n,true)));
       document.body.dataset.page=parsed.body.dataset.page;
       document.body.dataset.platform=parsed.body.dataset.platform||'';
@@ -85,7 +94,7 @@
       renderedPage=url.pathname+url.search;
       window.renderPracticePage();
       nav.querySelectorAll('a').forEach(a=>{if(new URL(a.href).pathname===url.pathname)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
-      if(!url.hash||!window.scrollPracticeSection(url.hash))window.scrollTo(0,0);
+      if(!url.hash||!window.scrollPracticeSection?.(url.hash))window.scrollTo(0,0);
     }catch(error){
       if(id!==navigationId||error.name==='AbortError')return;
       if(fromHistory){location.reload();return;}
@@ -106,7 +115,7 @@
     if(url.pathname+url.search===renderedPage){
       // Fragment history is an in-page jump, not a page fetch or re-render.
       ++navigationId;navigationRequest?.abort();nav.removeAttribute('aria-busy');
-      if(!url.hash||!window.scrollPracticeSection(url.hash))window.scrollTo(0,0);
+      if(!url.hash||!window.scrollPracticeSection?.(url.hash))window.scrollTo(0,0);
       return;
     }
     navigate(url,true);
