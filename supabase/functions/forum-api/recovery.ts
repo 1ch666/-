@@ -43,7 +43,7 @@ export async function recoveryAction(action:string,input:any,actor:any,deps:Depe
         }
       }else if(kind==='bind')throw new Error('暫時無法綁定，請檢查信箱或稍後重試');
     }
-    return {ticket:id,message:action==='backup_start'?'請輸入原 Gmail 與備援信箱各自收到的驗證碼。':generic};
+    return {ticket:id,message:action==='backup_start'?'請輸入原登入信箱 與備援信箱各自收到的驗證碼。':generic};
   }
   const id=uuid(input.ticket),kind=action==='backup_confirm'?'bind':'recover';
   if(!/^\d{8}$/.test(input.code)||(kind==='bind'&&!/^\d{8}$/.test(input.primary_code)))throw new Error('請輸入 8 位驗證碼');
@@ -64,8 +64,8 @@ export async function recoveryAction(action:string,input:any,actor:any,deps:Depe
     // Keep all previously issued sessions invalid even if Auth JWTs have not expired.
     await db('forum_recovery_guard?user_id=eq.'+uid,{method:'PATCH',body:JSON.stringify({blocked:false,revoked_before:new Date().toISOString()})});
     try{await send(data.email||data.user?.email,'論壇密碼已重設','你的論壇密碼已透過備援信箱重設。舊論壇登入已失效；若非本人操作，請立即取回帳號並檢查信箱安全。')}catch{/* notification failure must not repeat password update */}
-    return {message:'密碼已重設，請用原 Gmail 與新論壇密碼重新登入。'};
+    return {message:'密碼已重設，請用原登入信箱 與新論壇密碼重新登入。'};
   }
-  try{await send(actor.email,'論壇備援信箱已變更','你的論壇備援信箱已通過雙信箱驗證並更新，可用來重設論壇密碼。若非本人操作，請立即檢查原 Gmail 的安全性並聯絡管理員。')}catch{/* binding remains committed */}
+  try{await send(actor.email,'論壇備援信箱已變更','你的論壇備援信箱已通過雙信箱驗證並更新，可用來重設論壇密碼。若非本人操作，請立即檢查原登入信箱 的安全性並聯絡管理員。')}catch{/* binding remains committed */}
   return {message:'備援信箱已驗證並綁定，可用來重設論壇密碼。'};
 }

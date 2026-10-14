@@ -16,6 +16,9 @@ test('Password validation preserves exact credentials including whitespace',()=>
 test('Gmail aliases normalize to one mailbox; other domains are rejected',()=>{
   assert.equal(gmail(' Test.Person+class@gmail.com '),'testperson@gmail.com');
   assert.equal(gmail('testperson@gmail.com'),gmail('test.person@gmail.com'));
+  assert.equal(gmail(' S141244@stu.tcssh.tc.edu.tw '),'s141244@stu.tcssh.tc.edu.tw');
+  assert.notEqual(gmail('a.b@stu.tcssh.tc.edu.tw'),gmail('ab@stu.tcssh.tc.edu.tw'));
+  for(const bad of ['a+tag@stu.tcssh.tc.edu.tw','a@stu.tcssh.tc.edu.tw.evil','a@tcssh.tc.edu.tw'])assert.throws(()=>gmail(bad));
   for(const bad of ['test@outlook.com','test@gmail.com.evil','test@googlemail.com','@gmail.com',null])assert.throws(()=>gmail(bad));
   assert.throws(()=>password('tcsshac'));assert.throws(()=>displayName('a\u202eb'));
 });
@@ -34,6 +37,13 @@ test('Database enforces identity uniqueness, verification, ownership and private
       create table auth.users(id uuid primary key,email text unique,email_confirmed_at timestamptz,banned_until timestamptz);
       insert into auth.users(id,email,email_confirmed_at) values('${SCHOOL_USER}','school-owner@gmail.com',now());`);
     await db.exec(await readFile('supabase/migrations/202610140001_forum.sql','utf8'));
+    await db.exec(await readFile('supabase/migrations/202610140003_school_email.sql','utf8'));
+    const student='44444444-4444-4444-8444-444444444444';
+    await db.query('insert into auth.users(id,email) values($1,$2)',[student,'s141244@stu.tcssh.tc.edu.tw']);
+    assert.equal((await db.query('select count(*)::int n from public.forum_auth_links where auth_user_id=$1',[student])).rows[0].n,0);
+    await db.query('update auth.users set email_confirmed_at=now() where id=$1',[student]);
+    assert.equal((await db.query('select user_id from public.forum_auth_links where auth_user_id=$1',[student])).rows[0].user_id,student);
+    await db.query('delete from auth.users where id=$1',[student]);
     const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',c='33333333-3333-4333-8333-333333333333';
     await db.query('insert into auth.users(id,email) values($1,$2)',[a,'test.person@gmail.com']);
     await db.query('insert into auth.users(id,email) values($1,$2)',[b,'testperson+new@gmail.com']);

@@ -25,7 +25,7 @@ async function db(path:string,options:RequestInit={}){
   if(!res.ok){
     const failure=await res.json().catch(()=>({}));
     if(String(failure.message).includes('15 seconds'))throw new HttpError(429,'發言間隔至少 15 秒，請稍後再試');
-    if(failure.code==='23505')throw new HttpError(409,'這個 Gmail 已有論壇帳號');
+    if(failure.code==='23505')throw new HttpError(409,'這個信箱 已有論壇帳號');
     throw new HttpError(503,'論壇資料服務暫時無法使用');
   }
   return res.status===204?null:await res.json();
@@ -45,7 +45,7 @@ async function readBody(req:Request){
 }
 function sessionResult(data:any){
   if(data.user?.id===SCHOOL_USER)throw new HttpError(403,'此信箱屬於同校共用帳號，不能作為個人會員；這不是信箱未驗證。若個人 Google 被誤綁，請聯絡管理員拆分。');
-  if(!data.access_token||!data.user?.email_confirmed_at)throw new HttpError(403,'請先驗證 Gmail，再使用個人帳號登入');
+  if(!data.access_token||!data.user?.email_confirmed_at)throw new HttpError(403,'請先驗證信箱，再使用個人帳號登入');
   gmail(data.user.email);
   return {access_token:data.access_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+data.expires_in};
 }
@@ -123,7 +123,7 @@ Deno.serve(async req=>{
       return reply(200,{post:posts[0],comments:comments.slice(0,30),more:comments.length>30});
     }
     const personal=await user(req.headers.get('x-forum-token')||'');
-    if(personal.id===SCHOOL_USER||!personal.email_confirmed_at)throw new HttpError(403,'請先登入已驗證的個人 Gmail 帳號');
+    if(personal.id===SCHOOL_USER||!personal.email_confirmed_at)throw new HttpError(403,'請先登入已驗證的個人信箱帳號');
     const canonical=gmail(personal.email);
     const links=await db('forum_auth_links?auth_user_id=eq.'+personal.id+'&select=user_id');
     if(links.length!==1)throw new HttpError(403,'論壇會員身分不符');
@@ -165,7 +165,7 @@ Deno.serve(async req=>{
   }catch(error){
     if(error instanceof HttpError)return reply(error.status,{error:error.message});
     if(error instanceof SyntaxError)return reply(400,{error:'請求格式錯誤'});
-    if(error instanceof Error&&/Gmail|名稱|密碼|標題|內容|留言|頁碼|識別碼/.test(error.message))return reply(400,{error:error.message});
+    if(error instanceof Error&&/Gmail|信箱|名稱|密碼|標題|內容|留言|頁碼|識別碼/.test(error.message))return reply(400,{error:error.message});
     return reply(503,{error:'論壇服務暫時無法使用，請稍後重試'});
   }
 });

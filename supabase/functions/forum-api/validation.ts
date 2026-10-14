@@ -1,8 +1,14 @@
 export const SCHOOL_USER = '7484fe06-801d-44be-807f-3b773e4d21d2';
 export function gmail(value: unknown): string {
-  if(typeof value!=='string'||value.length>254)throw new Error('請輸入 Gmail 信箱');
+  if(typeof value!=='string'||value.length>254)throw new Error('請輸入有效信箱');
+  // Workspace addresses do not inherit Gmail dot/plus alias semantics.
+  const school=value.trim().toLowerCase();
+  if(/^[a-z0-9]+(?:[._-][a-z0-9]+)*@stu\.tcssh\.tc\.edu\.tw$/.test(school)){
+    if(school.split('@')[0].length>64)throw new Error('信箱格式錯誤');
+    return school;
+  }
   const match=value.trim().toLowerCase().match(/^([a-z0-9.]+)(?:\+[a-z0-9._-]+)?@gmail\.com$/);
-  if(!match)throw new Error('只接受 @gmail.com 信箱');
+  if(!match)throw new Error('只接受 @gmail.com 或 @stu.tcssh.tc.edu.tw 信箱');
   const local=match[1].replaceAll('.','');
   if(local.length<1||local.length>64)throw new Error('Gmail 格式錯誤');
   return local+'@gmail.com';

@@ -6,7 +6,7 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const date=s=>new Date(s).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'});
   const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
-  const emailField=()=>field('Gmail 信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
+  const emailField=()=>field('會員信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
   const passwordField=(fresh=false)=>field('論壇密碼（不是 Google 密碼）','password','password',`autocomplete="${fresh?'new-password':'current-password'}" ${fresh?'minlength="12"':''} maxlength="128"`);
   const message=(text,error=false)=>{const node=root?.querySelector('#forumStatus');if(node){node.textContent=text;node.classList.toggle('error',error)}};
   const request=(action,data={})=>{
@@ -25,12 +25,12 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
   function needProfile(){return '<p>發言前請先設定公開名稱。</p><button data-screen="profile">設定名稱</button>'}
   const backupField=()=>field('備援信箱','backup_email','email','autocomplete="email" maxlength="254"');
   const codeField=(label,name)=>field(label,name,'text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{8}" minlength="8" maxlength="8"');
-  function profileForm(){return `<form data-form="profile">${field('公開名稱','name','text',`minlength="2" maxlength="30" autocomplete="nickname" value="${esc(me?.profile?.display_name||me?.suggested_name||'')}"`)}<p class="forum-help">2–30 字。名稱會顯示在文章與留言旁，不會公開 Gmail；名稱不是唯一識別碼。</p><button>儲存名稱</button></form>`}
+  function profileForm(){return `<form data-form="profile">${field('公開名稱','name','text',`minlength="2" maxlength="30" autocomplete="nickname" value="${esc(me?.profile?.display_name||me?.suggested_name||'')}"`)}<p class="forum-help">2–30 字。名稱會顯示在文章與留言旁，不會公開信箱；名稱不是唯一識別碼。</p><button>儲存名稱</button></form>`}
   async function render(){
     if(!root?.isConnected)return;
     if(member&&me&&!me.profile&&!['reset','login'].includes(screen))screen='onboarding';
     const ticket=++generation;
-    root.innerHTML=`<header class="hero compact"><h1>討論論壇</h1><p>發言須登入個人會員。Google 登入不另寄驗證信；Gmail／密碼註冊須驗證信箱。</p></header><nav class="forum-nav" aria-label="論壇功能"><button data-screen="list">全部文章</button><button data-screen="compose">發表文章</button>${member?'<button data-screen="profile">個人資料</button><button data-action="logout">論壇登出</button>':'<button data-screen="login">論壇登入</button><button data-screen="register">註冊</button>'}</nav><p id="forumStatus" class="forum-status" role="status" aria-live="polite"></p><section id="forumContent"></section>`;
+    root.innerHTML=`<header class="hero compact"><h1>討論論壇</h1><p>發言須登入個人會員。Google 登入不另寄驗證信；信箱／密碼註冊須驗證信箱。</p></header><nav class="forum-nav" aria-label="論壇功能"><button data-screen="list">全部文章</button><button data-screen="compose">發表文章</button>${member?'<button data-screen="profile">個人資料</button><button data-action="logout">論壇登出</button>':'<button data-screen="login">論壇登入</button><button data-screen="register">註冊</button>'}</nav><p id="forumStatus" class="forum-status" role="status" aria-live="polite"></p><section id="forumContent"></section>`;
     const content=root.querySelector('#forumContent');
     try{
       if(screen==='onboarding'){
@@ -48,10 +48,10 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
       }else if(screen==='profile'){
         if(!member){screen='login';return render()}
         message('讀取個人資料…');const currentMe=await request('me');if(ticket!==generation)return;me=currentMe;
-        content.innerHTML=`<h2>個人資料</h2><p>Gmail：${esc(me.email)}（僅本人可見）</p>${profileForm()}<h2>修改論壇密碼</h2><form data-form="password">${passwordField(true)}<button>修改密碼</button></form>`;message('');
+        content.innerHTML=`<h2>個人資料</h2><p>信箱：${esc(me.email)}（僅本人可見）</p>${profileForm()}<h2>修改論壇密碼</h2><form data-form="password">${passwordField(true)}<button>修改密碼</button></form>`;message('');
       }else if(screen==='register'){
         const status=await request('status');if(ticket!==generation)return;
-        content.innerHTML=`<h2>註冊論壇帳號</h2><p>同一個 Gmail 只能有一個會員；句點與 +標籤視為同一個信箱。</p><form data-form="register">${emailField()}${field('公開名稱','name','text','minlength="2" maxlength="30" autocomplete="nickname"')}${passwordField(true)}<p class="forum-help">密碼至少 12 字元。請使用與 Google 帳號不同的密碼。</p><button ${status.signup_enabled?'':'disabled'}>寄送驗證碼</button></form><button data-screen="verify">我已有驗證碼</button>`;
+        content.innerHTML=`<h2>註冊論壇帳號</h2><p>接受 Gmail 或 @stu.tcssh.tc.edu.tw。同一信箱只能有一個會員；只有 Gmail 的句點與 +標籤視為同一信箱。</p><form data-form="register">${emailField()}${field('公開名稱','name','text','minlength="2" maxlength="30" autocomplete="nickname"')}${passwordField(true)}<p class="forum-help">密碼至少 12 字元。請使用與 Google 帳號不同的密碼。</p><button ${status.signup_enabled?'':'disabled'}>寄送驗證碼</button></form><button data-screen="verify">我已有驗證碼</button>`;
         if(!status.signup_enabled)message('註冊尚未開放，正在設定驗證信服務。');
       }else if(screen==='login'){
         content.innerHTML=`<h2>論壇登入</h2><form data-form="login">${emailField()}${passwordField()}<button>登入論壇</button></form><button data-screen="recover">忘記密碼</button> <button data-screen="verify">驗證信箱／重寄驗證碼</button>`;
@@ -59,21 +59,21 @@ import {googleLogin,cancelGoogle} from './forum-google.js';
         content.innerHTML=`<h2>重設論壇密碼</h2><form data-form="recover">${emailField()}<button>寄送重設驗證碼</button></form><button data-screen="backup_recover">無法使用原信箱：以備援信箱取回</button>`;
       }else if(screen==='backup_recover'){
         const status=await request('status');if(ticket!==generation)return;
-        content.innerHTML=`<h2>以備援信箱取回帳號</h2><p>必須使用先前已驗證綁定的備援信箱。取回後仍以原 Gmail 登入。</p><form data-form="backup_recover">${emailField()}${backupField()}<button ${status.backup_enabled?'':'disabled'}>寄送備援驗證碼</button></form>`;
+        content.innerHTML=`<h2>以備援信箱取回帳號</h2><p>必須使用先前已驗證綁定的備援信箱。取回後仍以原登入信箱 登入。</p><form data-form="backup_recover">${emailField()}${backupField()}<button ${status.backup_enabled?'':'disabled'}>寄送備援驗證碼</button></form>`;
         if(!status.backup_enabled)message('備援信箱功能尚未開放。');
       }else if(screen==='backup_confirm'){
-        content.innerHTML=`<h2>驗證備援信箱</h2><p>兩組驗證碼有效期限 10 分鐘；合計最多嘗試 5 次。</p><form data-form="backup_confirm">${codeField('原 Gmail 收到的驗證碼','primary_code')}${codeField('備援信箱收到的驗證碼','code')}<button>確認綁定</button></form>`;
+        content.innerHTML=`<h2>驗證備援信箱</h2><p>兩組驗證碼有效期限 10 分鐘；合計最多嘗試 5 次。</p><form data-form="backup_confirm">${codeField('原登入信箱 收到的驗證碼','primary_code')}${codeField('備援信箱收到的驗證碼','code')}<button>確認綁定</button></form>`;
       }else if(screen==='backup_reset'){
         content.innerHTML=`<h2>以備援信箱重設密碼</h2><form data-form="backup_reset">${codeField('備援信箱收到的驗證碼','code')}${passwordField(true)}<button>重設密碼並使舊登入失效</button></form>`;
       }else if(screen==='verify'){
-        content.innerHTML=`<h2>${verifyType==='recovery'?'重設密碼驗證':'驗證 Gmail'}</h2><form data-form="verify">${emailField()}${field('信件中的驗證碼','code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" minlength="6" maxlength="10"')}<button>驗證</button></form><button data-action="resend">重新寄送驗證碼</button>`;
+        content.innerHTML=`<h2>${verifyType==='recovery'?'重設密碼驗證':'驗證信箱'}</h2><form data-form="verify">${emailField()}${field('信件中的驗證碼','code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" minlength="6" maxlength="10"')}<button>驗證</button></form><button data-action="resend">重新寄送驗證碼</button>`;
         content.querySelector('[name=email]').value=pendingEmail;
       }else if(screen==='reset'){
         content.innerHTML=`<h2>設定新的論壇密碼</h2><form data-form="password">${passwordField(true)}<button>儲存新密碼</button></form>`;
       }
-      if(['login','register'].includes(screen))content.insertAdjacentHTML('afterbegin','<button data-action="google">使用 Google 登入</button><p>同一個已驗證 Gmail 共用會員。Google 首次登入後須設定公開名稱；可在個人資料設定論壇密碼。</p>');
+      if(['login','register'].includes(screen))content.insertAdjacentHTML('afterbegin','<button data-action="google">使用 Google 登入</button><p>同一個已驗證信箱 共用會員。Google 首次登入後須設定公開名稱；可在個人資料設定論壇密碼。</p>');
       if(screen==='profile'&&me){
-        content.insertAdjacentHTML('beforeend',`<h2>備援信箱</h2><p>${me.backup?'已驗證：'+esc(me.backup.email):'尚未綁定'}</p><p>可用來重設論壇密碼。新增或更換時，須同時驗證原 Gmail 與備援信箱。</p><form data-form="backup_start">${backupField()}<button ${me.backup_enabled?'':'disabled'}>寄送兩組驗證碼</button></form>`);
+        content.insertAdjacentHTML('beforeend',`<h2>備援信箱</h2><p>${me.backup?'已驗證：'+esc(me.backup.email):'尚未綁定'}</p><p>可用來重設論壇密碼。新增或更換時，須同時驗證原登入信箱 與備援信箱。</p><form data-form="backup_start">${backupField()}<button ${me.backup_enabled?'':'disabled'}>寄送兩組驗證碼</button></form>`);
         if(!me.backup_enabled)message('備援信箱功能尚未開放。');
       }
       if(member&&!me?.profile){
