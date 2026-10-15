@@ -3,6 +3,7 @@ import {recoveryAction} from './recovery.ts';
 import {sendForumMail} from './mailer.ts';
 import {avatarData} from './avatar.ts';
 import {editPost} from './edit-post.ts';
+import {changeComment} from './edit-comment.ts';
 
 const origin='https://1ch666.github.io';
 const base=Deno.env.get('SUPABASE_URL')!;
@@ -121,7 +122,7 @@ Deno.serve(async req=>{
       const id=uuid(input.id),offset=page(input.page)*30;
       const posts=await db('forum_posts?id=eq.'+id+'&select=id,author_id,title,body,created_at,author:forum_profiles(display_name,avatar_data)');
       if(!posts.length)throw new HttpError(404,'文章不存在');
-      const comments=await db('forum_comments?post_id=eq.'+id+'&select=id,body,created_at,author:forum_profiles(display_name,avatar_data)&order=created_at.asc,id.asc&limit=31&offset='+offset);
+      const comments=await db('forum_comments?post_id=eq.'+id+'&select=id,author_id,body,created_at,author:forum_profiles(display_name,avatar_data)&order=created_at.asc,id.asc&limit=31&offset='+offset);
       return reply(200,{post:posts[0],comments:comments.slice(0,30),more:comments.length>30});
     }
     const personal=await user(req.headers.get('x-forum-token')||'');
@@ -145,6 +146,11 @@ Deno.serve(async req=>{
       });
       if(!rows?.length)throw new HttpError(400,'請先設定公開名稱');
       return reply(200,rows[0]);
+    }
+    if(action==='edit_comment'||action==='delete_comment'){
+      const rows=await changeComment(db,memberId,input,action==='delete_comment');
+      if(!rows?.length)throw new HttpError(404,'留言不存在，或你不是留言作者');
+      return reply(200,{ok:true,id:rows[0].id});
     }
     if(action==='edit_post'){
       const rows=await editPost(db,memberId,input);

@@ -5,6 +5,7 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
 (()=>{
   let member=null,expiryTimer,me=null,root,screen='list',listPage=0,threadId='',commentPage=0,verifyType='signup',pendingEmail='',generation=0,backupTicket='';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let visibleComments=new Map();
   const date=s=>new Date(s).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'});
   const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
   const emailField=()=>field('會員信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
@@ -45,6 +46,11 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
       }else if(screen==='thread'){
         message('讀取文章…');const data=await request('thread',{id:threadId,page:commentPage});if(ticket!==generation)return;
         content.innerHTML=`<article class="forum-post"><h2>${esc(data.post.title)}</h2><p class="forum-meta">${avatarMarkup(data.post.author?.avatar_data)}${esc(data.post.author?.display_name||'會員')} · ${esc(date(data.post.created_at))}</p><div class="markdown-body">${renderMarkdown(data.post.body)}</div></article><h2>留言</h2><ol class="forum-comments">${data.comments.map(c=>`<li><p class="forum-meta">${avatarMarkup(c.author?.avatar_data)}${esc(c.author?.display_name||'會員')} · ${esc(date(c.created_at))}</p><div class="markdown-body">${renderMarkdown(c.body)}</div></li>`).join('')}</ol>${data.comments.length?'':'<p>尚無留言。</p>'}${pager(commentPage,data.more,'comments')}<h2>新增留言</h2>${member?`<form data-form="comment">${editor(10000)}<button>送出留言</button></form>`:needAccount()}`;message('');
+        visibleComments=new Map(data.comments.map(c=>[c.id,c]));
+        content.querySelectorAll('.forum-comments > li').forEach((li,index)=>{
+          const c=data.comments[index];
+          if(member&&me?.member_id===c.author_id)li.insertAdjacentHTML('beforeend',`<div class="comment-actions"><button type="button" data-edit-comment="${esc(c.id)}">修改</button> <button type="button" data-delete-comment="${esc(c.id)}" aria-label="刪除自己的留言">🗑 刪除</button></div>`);
+        });
         if(member&&me?.member_id===data.post.author_id){
           content.querySelector('.forum-meta').insertAdjacentHTML('afterend','<button type="button" data-screen="edit">編輯文章</button> <button type="button" data-action="delete-post" aria-label="刪除自己的文章" title="刪除自己的文章">🗑 刪除文章</button>');
         }
@@ -128,6 +134,9 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
         const profile=await request('profile',data);if(ticket!==generation)return;
         me={...me,profile};const first=screen==='onboarding';if(first)screen='list';await render();
         if(!first)message('名稱已更新，既有文章與留言會顯示新名稱。');
+      }else if(action==='edit_comment'){
+        await request('edit_comment',{id:form.dataset.commentId,body:data.body});if(ticket!==generation)return;
+        screen='thread';await render();message('留言已更新。');
       }else if(action==='edit_post'){
         await request('edit_post',{id:threadId,title:data.title,body:data.body});if(ticket!==generation)return;
         screen='thread';await render();message('文章已更新。');
@@ -143,6 +152,23 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
   }
   async function click(event){
     const button=event.target.closest('button');if(!button)return;
+    if(button.dataset.editComment){
+      const c=visibleComments.get(button.dataset.editComment);
+      if(!member||me?.member_id!==c?.author_id)return;
+      const li=button.closest('li');
+      li.querySelector('.comment-actions').hidden=true;
+      li.insertAdjacentHTML('beforeend',`<form data-form="edit_comment" data-comment-id="${esc(c.id)}">${editor(10000)}<button>儲存修改</button> <button type="button" data-cancel-comment>取消</button></form>`);
+      li.querySelector('textarea').value=c.body;li.querySelector('textarea').focus();return;
+    }
+    if(button.hasAttribute('data-cancel-comment')){
+      const li=button.closest('li');button.closest('form').remove();li.querySelector('.comment-actions').hidden=false;return;
+    }
+    if(button.dataset.deleteComment){
+      if(!member||!window.confirm('確定永久刪除自己的這則留言？此操作無法復原。'))return;
+      const ticket=generation;button.disabled=true;message('刪除中…');
+      try{await request('delete_comment',{id:button.dataset.deleteComment});if(ticket!==generation)return;await render();message('留言已刪除。')}
+      catch(error){if(ticket===generation)message(error.message,true)}finally{button.disabled=false}return;
+    }
     if(button.dataset.action==='reset-avatar'){
       const ticket=generation;button.disabled=true;message('更新頭像…');
       try{const profile=await request('avatar',{avatar:null});if(ticket!==generation)return;me={...me,profile};await render();message('已改用預設頭像。')}
