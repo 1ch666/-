@@ -6,21 +6,28 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
   let member=null,expiryTimer,me=null,root,screen='list',listPage=0,threadId='',commentPage=0,verifyType='signup',pendingEmail='',generation=0,backupTicket='';
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let visibleComments=new Map();
+  // Drafts and view state stay in memory only, across internal page switches.
+  const pageViews=new Map();
   const date=s=>new Date(s).toLocaleString('zh-TW',{dateStyle:'medium',timeStyle:'short'});
   const field=(label,name,type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" required ${extra}></label>`;
   const emailField=()=>field('會員信箱','email','email','autocomplete="email" maxlength="254" placeholder="name@gmail.com"');
   const passwordField=(fresh=false)=>field('論壇密碼（不是 Google 密碼）','password','password',`autocomplete="${fresh?'new-password':'current-password'}" ${fresh?'minlength="12"':''} maxlength="128"`);
   const message=(text,error=false)=>{const node=root?.querySelector('#forumStatus');if(node){const waiting=!error&&/(?:…|\.{3})$/.test(text);node.textContent=waiting?text.replace(/(?:…|\.{3})$/,''):text;node.classList.toggle('waiting-dots',waiting);node.classList.toggle('error',error)}};
   const request=(action,data={})=>{
-    if(member&&member.expires_at*1000<=Date.now()){member=null;me=null;throw new Error('論壇登入已到期，請重新登入')}
+    if(member&&member.expires_at*1000<=Date.now()){member=null;me=null;pageViews.clear();throw new Error('論壇登入已到期，請重新登入')}
     return window.practiceForumRequest(action,data,member?.access_token);
   };
   function accountSession(data){
     member=data;clearTimeout(expiryTimer);
-    expiryTimer=setTimeout(()=>{member=null;me=null;if(document.body.dataset.page==='forum'){screen='login';render()}},Math.max(0,data.expires_at*1000-Date.now()));
+    expiryTimer=setTimeout(()=>{member=null;me=null;pageViews.clear();if(document.body.dataset.page==='forum'){screen='login';render()}},Math.max(0,data.expires_at*1000-Date.now()));
   }
-  window.resetForumSession=()=>{cancelGoogle();member=null;me=null;clearTimeout(expiryTimer);generation++;pendingEmail='';backupTicket='';};
-  window.leaveForumPage=()=>{generation++;root=null;};
+  window.resetForumSession=()=>{cancelGoogle();member=null;me=null;clearTimeout(expiryTimer);generation++;pendingEmail='';backupTicket='';pageViews.clear();visibleComments.clear();screen='list';threadId='';listPage=0;commentPage=0;};
+  window.leaveForumPage=()=>{
+    if(root?.isConnected&&!root.querySelector('.waiting-dots')){
+      pageViews.set(root.dataset.route,{root,screen,listPage,threadId,commentPage,visibleComments});
+    }
+    generation++;root=null;
+  };
   function editor(max=20000){return `<label>內容（Markdown）<textarea name="body" rows="12" maxlength="${max}" required aria-describedby="markdownHelp"></textarea></label><p id="markdownHelp" class="forum-help">支援標題、粗體、清單、引用、表格、連結與程式碼區塊。不支援 HTML、圖片或附件。</p><button type="button" data-preview>預覽 Markdown</button><section class="markdown-body forum-preview" aria-label="Markdown 預覽" hidden></section>`}
   function pager(current,more,kind){return `<div class="forum-pager"><button data-page="${kind}" data-delta="-1" ${current===0?'disabled':''}>上一頁</button><span>第 ${current+1} 頁</span><button data-page="${kind}" data-delta="1" ${more?'':'disabled'}>下一頁</button></div>`}
   function needAccount(){return '<p>發文與留言須登入個人帳號；同校識別不等於論壇登入。</p><button data-screen="login">論壇登入</button> <button data-screen="register">註冊</button>'}
@@ -206,6 +213,12 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
   }
   window.renderForumPage=()=>{
     root=document.querySelector('#forumRoot');if(!root)return;
+    const route=location.pathname, saved=pageViews.get(route);
+    if(saved){
+      root.replaceWith(saved.root);({root,screen,listPage,threadId,commentPage,visibleComments}=saved);
+      pageViews.delete(route);return;
+    }
+    root.dataset.route=route;
     // New shell each time; listeners are attached only to that shell.
     root.addEventListener('submit',submit);root.addEventListener('click',click);screen=location.pathname.endsWith('/profile.html')||new URLSearchParams(location.search).get('view')==='profile'?'profile':'list';render();
   };

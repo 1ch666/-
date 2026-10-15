@@ -4,6 +4,11 @@
   // Public anon key: access is enforced by Auth and database RLS, not this key.
   const key='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impmcm11cXZmdXh4b3FmanZ2bmV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0NTQ5NDMsImV4cCI6MjEwNzAzMDk0M30.Bdd9s0_XAhfVt0SmcNcvVENphTHyQkxliWpwvkJn8dw';
   const storageKey='practice.session.v1';
+  // A new document is a new visit. Internal navigation never runs this again.
+  const home=new URL('index.html',location.href);
+  try{sessionStorage.removeItem(storageKey);localStorage.removeItem(storageKey)}catch{}
+  if(location.pathname!==home.pathname){location.replace(home.href);return;}
+  if(location.search||location.hash)history.replaceState(null,'',home.href);
   const keys=['PROBLEMS','COMBINED_GROUPS','ROADMAP_STAGES','CODEFORCES_GROUPS','CSES_GROUPS','ATCODER_GROUPS','PLATFORMS'];
   let session, timer;
   const shell=document.querySelector('.site-layout'), nav=document.querySelector('.topnav');
@@ -133,7 +138,10 @@ panel.innerHTML='<h1>同校識別</h1><p>這是進站識別，不是個人論壇
     }
     navigate(url,true);
   });
-  addEventListener('pagehide',()=>{clear();locked('請重新登入');form.reset()});
+  addEventListener('pagehide',()=>{
+    ++navigationId;navigationRequest?.abort();clear();locked('請重新登入');form.reset();
+    keys.forEach(k=>delete window[k]);shell.replaceChildren();
+  });
   addEventListener('pageshow',event=>{if(event.persisted){clear();locked('請重新登入');location.reload()}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&session?.expires_at*1000<=Date.now()){clear();location.reload()}});
   // Login tokens live only in this document's memory; discard legacy cached sessions.
