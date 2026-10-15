@@ -7,6 +7,15 @@
   const keys=['PROBLEMS','COMBINED_GROUPS','ROADMAP_STAGES','CODEFORCES_GROUPS','CSES_GROUPS','ATCODER_GROUPS','PLATFORMS'];
   let session, timer;
   const shell=document.querySelector('.site-layout'), nav=document.querySelector('.topnav');
+  function syncCurrentPage(url){
+    const normalize=path=>path.endsWith('/')?path+'index.html':path;
+    nav.querySelectorAll('a').forEach(a=>{
+      const target=new URL(a.href);
+      if(target.origin===url.origin&&normalize(target.pathname)===normalize(url.pathname))a.setAttribute('aria-current','page');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  syncCurrentPage(new URL(location.href));
   const panel=document.createElement('main');
   panel.className='auth-panel';
   panel.innerHTML='<h1>同校識別</h1><p>這是進站識別，不是個人論壇帳號。</p><form><label for="username">同校識別帳號</label><input id="username" name="username" autocomplete="username" required maxlength="64"><label for="password">同校識別密碼</label><div class="auth-password-wrap"><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128"><button class="auth-password-toggle" type="button" aria-controls="password" aria-label="顯示密碼" aria-pressed="false" title="顯示密碼"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><path class="auth-eye-slash" d="m3 3 18 18"/></svg></button></div><button type="submit">進入網站</button><p class="auth-status" role="status" aria-live="polite"></p></form>';
@@ -97,7 +106,7 @@
       if(!fromHistory)history.pushState(null,'',url.href);
       renderedPage=url.pathname+url.search;
       window.renderPracticePage();
-      nav.querySelectorAll('a').forEach(a=>{if(new URL(a.href).pathname===url.pathname)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+      syncCurrentPage(url);
       if(!url.hash||!window.scrollPracticeSection?.(url.hash))window.scrollTo(0,0);
     }catch(error){
       if(id!==navigationId||error.name==='AbortError')return;
