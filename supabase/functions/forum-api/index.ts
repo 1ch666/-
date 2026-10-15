@@ -2,6 +2,7 @@ import {SCHOOL_USER,gmail,bounded,displayName,password,loginPassword,uuid,page} 
 import {recoveryAction} from './recovery.ts';
 import {sendForumMail} from './mailer.ts';
 import {avatarData} from './avatar.ts';
+import {editPost} from './edit-post.ts';
 
 const origin='https://1ch666.github.io';
 const base=Deno.env.get('SUPABASE_URL')!;
@@ -144,6 +145,11 @@ Deno.serve(async req=>{
       });
       if(!rows?.length)throw new HttpError(400,'請先設定公開名稱');
       return reply(200,rows[0]);
+    }
+    if(action==='edit_post'){
+      const rows=await editPost(db,memberId,input);
+      if(!rows?.length)throw new HttpError(404,'文章不存在，或你不是文章作者');
+      return reply(200,{ok:true,id:rows[0].id});
     }
     if(action==='delete_post'){
       // Ownership is part of the atomic DELETE, never trusted from client input.

@@ -46,8 +46,15 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
         message('讀取文章…');const data=await request('thread',{id:threadId,page:commentPage});if(ticket!==generation)return;
         content.innerHTML=`<article class="forum-post"><h2>${esc(data.post.title)}</h2><p class="forum-meta">${avatarMarkup(data.post.author?.avatar_data)}${esc(data.post.author?.display_name||'會員')} · ${esc(date(data.post.created_at))}</p><div class="markdown-body">${renderMarkdown(data.post.body)}</div></article><h2>留言</h2><ol class="forum-comments">${data.comments.map(c=>`<li><p class="forum-meta">${avatarMarkup(c.author?.avatar_data)}${esc(c.author?.display_name||'會員')} · ${esc(date(c.created_at))}</p><div class="markdown-body">${renderMarkdown(c.body)}</div></li>`).join('')}</ol>${data.comments.length?'':'<p>尚無留言。</p>'}${pager(commentPage,data.more,'comments')}<h2>新增留言</h2>${member?`<form data-form="comment">${editor(10000)}<button>送出留言</button></form>`:needAccount()}`;message('');
         if(member&&me?.member_id===data.post.author_id){
-          content.querySelector('.forum-meta').insertAdjacentHTML('afterend','<button type="button" data-action="delete-post" aria-label="刪除自己的文章" title="刪除自己的文章">🗑 刪除文章</button>');
+          content.querySelector('.forum-meta').insertAdjacentHTML('afterend','<button type="button" data-screen="edit">編輯文章</button> <button type="button" data-action="delete-post" aria-label="刪除自己的文章" title="刪除自己的文章">🗑 刪除文章</button>');
         }
+      }else if(screen==='edit'){
+        if(!member){screen='login';return render()}
+        message('讀取文章…');const data=await request('thread',{id:threadId,page:0});if(ticket!==generation)return;
+        if(me?.member_id!==data.post.author_id)throw new Error('只能修改自己發布的文章。');
+        content.innerHTML=`<h2>編輯文章</h2><p>可修改標題與內容，不限時間；原發文時間與留言會保留。</p><form data-form="edit_post">${field('標題','title','text','minlength="2" maxlength="120"')}${editor()}<button>儲存修改</button><button type="button" data-screen="thread">取消</button></form>`;
+        content.querySelector('[name=title]').value=data.post.title;
+        content.querySelector('[name=body]').value=data.post.body;message('');
       }else if(screen==='compose'){
         content.innerHTML='<h2>發表文章</h2>'+(member?`<form data-form="post">${field('標題','title','text','minlength="2" maxlength="120"')}${editor()}<button>發布文章</button></form>`:needAccount());
       }else if(screen==='profile'){
@@ -121,6 +128,9 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
         const profile=await request('profile',data);if(ticket!==generation)return;
         me={...me,profile};const first=screen==='onboarding';if(first)screen='list';await render();
         if(!first)message('名稱已更新，既有文章與留言會顯示新名稱。');
+      }else if(action==='edit_post'){
+        await request('edit_post',{id:threadId,title:data.title,body:data.body});if(ticket!==generation)return;
+        screen='thread';await render();message('文章已更新。');
       }else if(action==='password'){
         await request('password',data);if(ticket!==generation)return;form.reset();screen='profile';await render();message('論壇密碼已更新。');
       }else{
