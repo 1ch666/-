@@ -11,13 +11,15 @@ export function imageBytes(value:unknown):Uint8Array{
   if(typeof value!=='string'||value.length>700000||!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value))throw new Error('圖片格式錯誤');
   let bytes:Uint8Array;try{bytes=Uint8Array.from(atob(value.slice(23)),c=>c.charCodeAt(0))}catch{throw new Error('圖片格式錯誤')}
   if(bytes.length>524288||bytes[0]!==255||bytes[1]!==216||bytes.at(-2)!==255||bytes.at(-1)!==217)throw new Error('圖片格式或大小錯誤');
-  let i=2,valid=false;
+  let i=2,valid=false;const metadata:Array<[number,number]>=[];
   while(i+3<bytes.length){
+    const markerStart=i;
     if(bytes[i++]!==255)break;while(bytes[i]===255)i++;
     const marker=bytes[i++];if(marker===218||marker===217)break;
     const n=(bytes[i]<<8)|bytes[i+1];if(n<2||i+n>bytes.length)break;
-    // Browser canvas output has no EXIF, GPS or comments; reject injected metadata.
-    if(marker===254||(marker>=225&&marker<=239))throw new Error('圖片須重新轉換後上傳');
+    // Canvas encoders may include an ICC profile (APP2). Strip optional
+    // metadata instead of rejecting otherwise valid JPEGs, including EXIF/GPS.
+    if(marker===254||(marker>=225&&marker<=239))metadata.push([markerStart,i+n]);
     if([192,193,194].includes(marker)){
       const h=(bytes[i+3]<<8)|bytes[i+4],w=(bytes[i+5]<<8)|bytes[i+6];
       valid=n>=8&&w>0&&h>0&&w<=1600&&h<=1600;
@@ -25,7 +27,11 @@ export function imageBytes(value:unknown):Uint8Array{
     }
     i+=n;
   }
-  if(!valid)throw new Error('圖片尺寸錯誤');return bytes;
+  if(!valid)throw new Error('圖片尺寸錯誤');
+  const clean=new Uint8Array(bytes.length-metadata.reduce((n,[start,end])=>n+end-start,0));
+  let read=0,write=0;
+  for(const [start,end] of metadata){clean.set(bytes.subarray(read,start),write);write+=start-read;read=end;}
+  clean.set(bytes.subarray(read),write);return clean;
 }
 export async function uploadImage(upstream:any,memberId:string,value:unknown){
   const bytes=imageBytes(value),path=uuid(memberId)+'/'+crypto.randomUUID()+'.jpg';

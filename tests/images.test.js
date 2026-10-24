@@ -15,6 +15,16 @@ test('Image validation rejects external URLs, traversal, active formats, size an
   for(const paths of [[],['../practice-private/curriculum.json'],['https://x'],Array(21).fill(path),[path+'?x=1']])assert.throws(()=>imagePaths(paths));
   assert.deepEqual(imagePaths([path,path]),[path]);
 });
+test('Browser ICC profiles and EXIF/comments are stripped, not rejected',async()=>{
+  const original=Buffer.from(fixture().slice(23),'base64');
+  const segment=(marker,text)=>{const data=Buffer.from(text);return Buffer.concat([Buffer.from([255,marker,(data.length+2)>>8,(data.length+2)&255]),data])};
+  const marked=Buffer.concat([original.subarray(0,2),segment(226,'ICC_PROFILE\0browser color profile'),segment(225,'Exif\0GPS location'),segment(254,'comment'),original.subarray(2)]);
+  const input='data:image/jpeg;base64,'+marked.toString('base64');
+  assert.deepEqual(Buffer.from(imageBytes(input)),original);
+  let stored;
+  await uploadImage(async(_path,options)=>{stored=options.body;return {ok:true}},member,input);
+  assert.deepEqual(Buffer.from(stored),original);
+});
 test('Uploads derive owner path on server, never overwrite; signing confined to private bucket',async()=>{
   const calls=[];const upstream=async(p,options)=>{calls.push({p,options});return {ok:true,json:async()=>[{path,signedURL:'/object/sign/forum-images/'+path+'?token=test'}]}};
   const image=await uploadImage(upstream,member,fixture());assert.ok(image.path.startsWith(member+'/'));
