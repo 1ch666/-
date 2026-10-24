@@ -1,6 +1,7 @@
 import {renderMarkdown} from './forum-markdown.js';
 import {googleLogin,cancelGoogle} from './forum-google.js';
 import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
+import {prepareImage,loadImages,imagePathPattern} from './forum-images.js';
 
 (()=>{
   let member=null,expiryTimer,me=null,root,screen='list',listPage=0,threadId='',commentPage=0,verifyType='signup',pendingEmail='',generation=0,backupTicket='';
@@ -28,7 +29,7 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
     }
     generation++;root=null;
   };
-  function editor(max=20000){return `<label>內容（Markdown）<textarea name="body" rows="12" maxlength="${max}" required aria-describedby="markdownHelp"></textarea></label><p id="markdownHelp" class="forum-help">支援標題、粗體、清單、引用、表格、連結與程式碼區塊。不支援 HTML、圖片或附件。</p><button type="button" data-preview>預覽 Markdown</button><section class="markdown-body forum-preview" aria-label="Markdown 預覽" hidden></section>`}
+  function editor(max=20000){return `<label>內容（Markdown）<textarea name="body" rows="12" maxlength="${max}" required aria-describedby="markdownHelp"></textarea></label><p id="markdownHelp" class="forum-help">支援 Markdown 與上傳圖片，不支援 HTML 或外部圖片。圖片限 JPG／PNG／WebP、每張 5 MB；上傳時縮小為最長邊 1600 px 的 JPEG。</p><label>插入圖片<input type="file" data-image-upload accept="image/jpeg,image/png,image/webp"></label><p class="image-status" role="status"></p><button type="button" data-preview>預覽 Markdown</button><section class="markdown-body forum-preview" aria-label="Markdown 預覽" hidden></section>`}
   function pager(current,more,kind){return `<div class="forum-pager"><button data-page="${kind}" data-delta="-1" ${current===0?'disabled':''}>上一頁</button><span>第 ${current+1} 頁</span><button data-page="${kind}" data-delta="1" ${more?'':'disabled'}>下一頁</button></div>`}
   function needAccount(){return '<p>發文與留言須登入個人帳號；同校識別不等於論壇登入。</p><button data-screen="login">論壇登入</button> <button data-screen="register">註冊</button>'}
   function needProfile(){return '<p>發言前請先設定公開名稱。</p><button data-screen="profile">設定名稱</button>'}
@@ -108,10 +109,31 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
       if(member&&!me?.profile){
         for(const form of content.querySelectorAll('form[data-form="post"],form[data-form="comment"]'))form.outerHTML=needProfile();
       }
+      if(ticket===generation)void loadImages(root,request);
     }catch(error){if(ticket===generation)message(error.message,true)}
+  }
+  async function uploadPicture(event){
+    const picker=event.target.closest('[data-image-upload]');if(!picker?.files?.length)return;
+    const form=picker.closest('form'),body=form.elements.body,status=form.querySelector('.image-status'),ticket=generation;
+    if(form.dataset.uploading)return;
+    if((body.value.match(/!\[[^\]]*\]\(forum-image:/g)||[]).length>=10){status.textContent='每則內容最多 10 張圖片。';picker.value='';return;}
+    const controls=[...form.querySelectorAll('button,input[type=file]')];
+    form.dataset.uploading='true';controls.forEach(n=>n.disabled=true);status.textContent='上傳圖片中';status.classList.add('waiting-dots');
+    try{
+      const image=await prepareImage(picker.files[0]);if(ticket!==generation)return;
+      const result=await request('image_upload',{image});if(ticket!==generation)return;
+      if(!imagePathPattern.test(result.path))throw new Error('圖片回應格式錯誤');
+      const text=`\n![圖片](forum-image:${result.path})\n`;
+      if(body.value.length+text.length>body.maxLength)throw new Error('內容字數已滿，請縮短後再插入圖片');
+      body.setRangeText(text,body.selectionStart,body.selectionEnd,'end');body.focus();
+      const preview=form.querySelector('.forum-preview');preview.innerHTML=renderMarkdown(body.value);preview.hidden=false;
+      form.querySelector('[data-preview]').textContent='收合預覽';void loadImages(preview,request);status.textContent='圖片已插入，發布或儲存後其他人才能在文章／留言中看到。';
+    }catch(error){if(ticket===generation)status.textContent=error.message}
+    finally{delete form.dataset.uploading;controls.forEach(n=>n.disabled=false);picker.value='';status.classList.remove('waiting-dots')}
   }
   async function submit(event){
     const form=event.target.closest('form[data-form]');if(!form)return;event.preventDefault();
+    if(form.dataset.uploading){message('請等圖片上傳完成。',true);return;}
     const data=Object.fromEntries(new FormData(form)),action=form.dataset.form;
     const buttons=form.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);message('處理中…');
     const ticket=generation;
@@ -202,7 +224,8 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
     }
     if(button.dataset.thread){threadId=button.dataset.thread;commentPage=0;screen='thread';return render()}
     if(button.dataset.page){if(button.dataset.page==='list')listPage+=Number(button.dataset.delta);else commentPage+=Number(button.dataset.delta);return render()}
-    if(button.hasAttribute('data-preview')){const form=button.closest('form'),preview=form.querySelector('.forum-preview');preview.innerHTML=renderMarkdown(form.elements.body.value);preview.hidden=!preview.hidden;button.textContent=preview.hidden?'預覽 Markdown':'收合預覽';return}
+    if(button.hasAttribute('data-forum-image')){void loadImages(button.parentElement,request);return;}
+    if(button.hasAttribute('data-preview')){const form=button.closest('form'),preview=form.querySelector('.forum-preview');preview.innerHTML=renderMarkdown(form.elements.body.value);preview.hidden=!preview.hidden;button.textContent=preview.hidden?'預覽 Markdown':'收合預覽';if(!preview.hidden)void loadImages(preview,request);return}
     if(button.dataset.action==='logout'){
       button.disabled=true;try{await request('logout')}catch{}window.resetForumSession();screen='list';await render();return;
     }
@@ -220,6 +243,6 @@ import {avatarMarkup,prepareAvatar} from './forum-avatar.js';
     }
     root.dataset.route=route;
     // New shell each time; listeners are attached only to that shell.
-    root.addEventListener('submit',submit);root.addEventListener('click',click);screen=location.pathname.endsWith('/profile.html')||new URLSearchParams(location.search).get('view')==='profile'?'profile':'list';render();
+    root.addEventListener('submit',submit);root.addEventListener('click',click);root.addEventListener('change',uploadPicture);screen=location.pathname.endsWith('/profile.html')||new URLSearchParams(location.search).get('view')==='profile'?'profile':'list';render();
   };
 })();

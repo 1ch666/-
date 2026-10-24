@@ -4,6 +4,7 @@ import {sendForumMail} from './mailer.ts';
 import {avatarData} from './avatar.ts';
 import {editPost} from './edit-post.ts';
 import {changeComment} from './edit-comment.ts';
+import {uploadImage,signImages} from './images.ts';
 
 const origin='https://1ch666.github.io';
 const base=Deno.env.get('SUPABASE_URL')!;
@@ -42,7 +43,7 @@ function clientIP(req:Request){
 async function readBody(req:Request){
   const reader=req.body?.getReader();if(!reader)throw new HttpError(400,'缺少請求內容');
   let size=0;const chunks:Uint8Array[]=[];
-  while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>100000){await reader.cancel();throw new HttpError(413,'內容過長')}chunks.push(value)}
+  while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>750000){await reader.cancel();throw new HttpError(413,'內容過長')}chunks.push(value)}
   const bytes=new Uint8Array(size);let i=0;for(const chunk of chunks){bytes.set(chunk,i);i+=chunk.length}
   return JSON.parse(new TextDecoder().decode(bytes));
 }
@@ -64,6 +65,7 @@ Deno.serve(async req=>{
     const allow=await db('site_members?user_id=eq.'+SCHOOL_USER+'&enabled=eq.true&select=user_id');
     if(!allow.length)throw new HttpError(403,'同校識別已停用');
     const input=await readBody(req),action=input.action;
+    if(action==='image_urls')return reply(200,await signImages(upstream,input.paths));
     if(action==='status')return reply(200,{signup_enabled:enabled(),backup_enabled:backupEnabled()});
     if(action==='google_exchange'){
       if(typeof input.code!=='string'||input.code.length>2048||!input.code||typeof input.verifier!=='string'||! /^[A-Za-z0-9_-]{43,128}$/.test(input.verifier))throw new HttpError(400,'Google 登入資料不完整');
@@ -139,6 +141,11 @@ Deno.serve(async req=>{
     catch{throw new HttpError(401,'請重新登入個人帳號')}
     const sessionAllowed=await db('rpc/forum_session_allowed',{method:'POST',body:JSON.stringify({actor_id:personal.id,session_key:sessionKey})});
     if(!sessionAllowed)throw new HttpError(401,'此登入已失效，請重新登入個人帳號');
+    if(action==='image_upload'){
+      const profiles=await db('forum_profiles?user_id=eq.'+memberId+'&select=user_id');
+      if(!profiles.length)throw new HttpError(400,'請先設定公開名稱');
+      return reply(200,await uploadImage(upstream,memberId,input.image));
+    }
     if(action==='avatar'){
       const avatar=avatarData(input.avatar);
       const rows=await db('forum_profiles?user_id=eq.'+memberId+'&select=display_name,avatar_data,created_at,updated_at',{
@@ -195,7 +202,7 @@ Deno.serve(async req=>{
   }catch(error){
     if(error instanceof HttpError)return reply(error.status,{error:error.message});
     if(error instanceof SyntaxError)return reply(400,{error:'請求格式錯誤'});
-    if(error instanceof Error&&/Gmail|信箱|名稱|密碼|標題|內容|留言|頁碼|識別碼|頭像/.test(error.message))return reply(400,{error:error.message});
+    if(error instanceof Error&&/Gmail|信箱|名稱|密碼|標題|內容|留言|頁碼|識別碼|頭像|圖片/.test(error.message))return reply(400,{error:error.message});
     return reply(503,{error:'論壇服務暫時無法使用，請稍後重試'});
   }
 });
